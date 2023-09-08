@@ -1,0 +1,5 @@
+*.exe
+*.sum
+data/
+*.api.yaml
+.vscode

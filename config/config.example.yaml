@@ -1,0 +1,11 @@
+Address: "localhost:6606" # API server address
+Secret: "" # API Token, used in HTTP(s) header `token`
+Database:
+  User: "root"
+  Password: ""
+  Name: "" # TG database
+Servers: # Servers to watch
+  - Name: "My Server" # Human readable server name
+    Address: "127.0.0.1:1337" # Server IP to send topics to
+    ConnectionAddress: "123.456.789.100:1337" # Actual server IP
+    ErrorMessage: "" # Error message returned when healthcheck fails

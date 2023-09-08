@@ -1,0 +1,1 @@
+A very simple test suite for CORS requests.
