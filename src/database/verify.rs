@@ -19,7 +19,7 @@ pub async fn verify_discord(
     }
 
     if let Some(one_time_token) = one_time_token {
-        let regex = Regex::new(r"^([A-z']+-){5}[A-z']+$").unwrap();
+        let regex = Regex::new(r"^\d{3}-\d{3}$").unwrap();
         if !regex.is_match(one_time_token) {
             return Err(Error::TokenInvalid);
         }
@@ -188,22 +188,9 @@ pub async fn get_ckey_by_discord_id(discord_id: &str, pool: &MySqlPool) -> Resul
 }
 
 async fn generate_one_time_token(connection: &mut PoolConnection<MySql>) -> String {
-    let common_words = include_str!("../../common_words.txt");
-    let common_words = common_words.lines().collect::<Vec<_>>();
-
     loop {
-        let mut token = String::new();
-
-        for _ in 0..6 {
-            token.push_str(common_words[rand::thread_rng().gen_range(0..common_words.len())]);
-            token.push('-');
-        }
-
-        token.pop();
-
-        if token.len() > 100 {
-            token.truncate(100);
-        }
+        let token: u32 = rand::thread_rng().gen_range(1..=999_999);
+        let token = format!("{:03}-{:03}", token / 1_000, token % 1_000);
 
         if let Err(Error::TokenInvalid) = discord_id_by_token(&token, false, connection).await {
             return token;
