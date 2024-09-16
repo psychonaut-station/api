@@ -10,6 +10,7 @@ pub async fn verify_discord(
     discord_id: &str,
     one_time_token: Option<&str>,
     ckey: Option<&str>,
+    skip_ckey: Option<bool>,
     pool: &MySqlPool,
 ) -> Result<Option<String>, Error> {
     let mut connection = pool.acquire().await?;
@@ -47,7 +48,7 @@ pub async fn verify_discord(
 
         return Ok(Some(ckey));
     } else if let Some(ckey) = ckey {
-        if !player_exists(ckey, &mut connection).await {
+        if !skip_ckey.unwrap_or(false) && !player_exists(ckey, &mut connection).await {
             return Err(Error::PlayerNotFound);
         }
 

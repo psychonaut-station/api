@@ -13,6 +13,7 @@ pub struct VerifyData<'r> {
     discord_id: &'r str,
     one_time_token: Option<&'r str>,
     ckey: Option<&'r str>,
+    skip_ckey: Option<bool>,
 }
 
 #[post("/verify", data = "<data>")]
@@ -29,6 +30,7 @@ pub async fn index(
         data.discord_id,
         data.one_time_token,
         data.ckey,
+        data.skip_ckey,
         &database.pool,
     )
     .await
