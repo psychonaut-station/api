@@ -2,6 +2,7 @@ use rocket::{routes, Build, Rocket};
 
 mod autocomplete;
 mod common;
+mod discord;
 mod patreon;
 mod player;
 mod server;
@@ -24,6 +25,8 @@ pub fn mount(rocket: Rocket<Build>) -> Rocket<Build> {
             server::index,
             verify::index,
             verify::unverify,
+            discord::user,
+            discord::member,
             autocomplete::job,
             autocomplete::ckey,
             autocomplete::ic_name

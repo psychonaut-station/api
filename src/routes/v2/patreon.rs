@@ -9,13 +9,14 @@ use crate::{
     Database,
 };
 
-use super::Json;
+use super::{common::ApiKey, Json};
 
 #[get("/patreon?<ckey>")]
 pub async fn index(
     ckey: &str,
     database: &State<Database>,
     config: &State<Config>,
+    _api_key: ApiKey,
 ) -> Result<Json<Value>, Status> {
     let Ok(patron) = is_patron(ckey, &database.pool, &config.discord).await else {
         return Err(Status::InternalServerError);

@@ -10,6 +10,8 @@ pub struct Config {
     pub secret: String,
     pub dev_secret: String,
     pub dev_routes: HashSet<String>,
+    pub exposed_secret: String,
+    pub exposed_routes: HashSet<String>,
     pub discord: Discord,
     pub cli_colors: bool,
     pub log_level: LogLevel,

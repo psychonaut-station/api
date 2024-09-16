@@ -31,14 +31,19 @@ pub async fn get_user(id: i64, token: &str) -> Result<User, Error> {
         .get(url)
         .header("Authorization", format!("Bot {token}"))
         .send()
+        .await?
+        .text()
         .await?;
 
-    let user: User = response.json().await?;
+    let Ok(user) = serde_json::from_str(&response) else {
+        let error: ErrorMessage = serde_json::from_str(&response)?;
+        return Err(Error::Discord(error.code));
+    };
 
     Ok(user)
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct GuildMember {
     pub roles: HashSet<String>, // other fields are not required for now (https://discord.com/developers/docs/resources/guild#guild-member-object)
 }

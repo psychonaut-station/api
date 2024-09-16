@@ -58,6 +58,17 @@ impl<'r> FromRequest<'r> for ApiKey {
             }
         }
 
+        if request.headers().get_one("X-EXP-KEY") == Some(&config.exposed_secret) {
+            if let Some(route) = request.route() {
+                if config
+                    .exposed_routes
+                    .contains(route.uri.origin.path().as_str())
+                {
+                    return Outcome::Success(ApiKey);
+                }
+            }
+        }
+
         Outcome::Error((Status::Unauthorized, ()))
     }
 }

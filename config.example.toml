@@ -3,6 +3,8 @@ port = 3000
 secret = ""
 dev_secret = ""
 dev_routes = ["/v2/player"]
+exposed_secret = ""
+exposed_routes = ["/v2/patreon", "/v2/discord/user", "/v2/discord/member"]
 cli_colors = true
 log_level = "normal"
 
