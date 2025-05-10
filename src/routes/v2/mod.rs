@@ -37,6 +37,7 @@ pub fn mount(rocket: Rocket<Build>) -> Rocket<Build> {
             autocomplete::ic_name,
             events::overview,
             events::citations,
+            events::crimes,
             events::deaths,
         ],
     )

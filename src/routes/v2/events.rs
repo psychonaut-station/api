@@ -51,3 +51,20 @@ pub async fn citations(
         Err(_) => Err(Status::InternalServerError),
     }
 }
+
+#[get("/events/crimes?<fetch_size>&<page>")]
+pub async fn crimes(
+    fetch_size: Option<i32>,
+    page: Option<i32>,
+    config: &State<Config>,
+    database: &State<Database>,
+    _api_key: ApiKey,
+) -> Result<Json<Value>, Status> {
+    match get_crimes(fetch_size, page, config, &database.pool).await {
+        Ok((crimes, total_count)) => Ok(Json::Ok(json!({
+            "data": crimes,
+            "total_count": total_count
+        }))),
+        Err(_) => Err(Status::InternalServerError),
+    }
+}
