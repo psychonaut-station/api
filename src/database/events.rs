@@ -550,8 +550,9 @@ pub struct Overview {
     pub duration: i64,
     #[serde(with = "crate::serde::datetime")]
     pub time: NaiveDateTime,
-    pub deaths: i64,
     pub citations: i64,
+    pub crimes: i64,
+    pub deaths: i64,
     pub players: u32,
     pub threat_level: i32,
     pub readied_players: i32,
