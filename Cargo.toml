@@ -3,10 +3,6 @@ name = "psychonaut-api"
 version = "0.1.0"
 edition = "2021"
 
-[[bin]]
-name = "api"
-path = "src/main.rs"
-
 [dependencies]
 chrono = "0.4.37"
 const_format = "0.2.32"
