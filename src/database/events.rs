@@ -158,10 +158,11 @@ pub async fn get_deaths(
 }
 
 #[derive(Debug, Serialize)]
-pub struct Citation {
+pub struct Crime {
     pub sender: String,
     pub recipient: String,
     pub crime: String,
+    pub crime_desc: Option<String>,
     pub fine: Option<i32>,
     pub round_id: Option<u32>,
     #[serde(with = "crate::serde::datetime")]
@@ -173,7 +174,7 @@ pub async fn get_citations(
     page: Option<i32>,
     config: &Config,
     pool: &MySqlPool,
-) -> Result<(Vec<Citation>, i64), Error> {
+) -> Result<(Vec<Crime>, i64), Error> {
     let round_id = get_round_id(config).await?;
 
     let fetch_size = fetch_size.unwrap_or(20);
@@ -182,10 +183,10 @@ pub async fn get_citations(
 
     let mut connection = pool.acquire().await?;
 
-    let mut sql = "SELECT COUNT(*) FROM citation".to_string();
+    let mut sql = "SELECT COUNT(*) FROM citation WHERE fine IS NOT NULL".to_string();
 
     if round_id.is_some() {
-        sql.push_str(" WHERE round_id < ?");
+        sql.push_str(" AND round_id < ?");
     }
 
     let mut query = sqlx::query_scalar(&sql);
@@ -197,10 +198,10 @@ pub async fn get_citations(
     let total_count = query.fetch_one(&mut *connection).await?;
 
     let mut sql =
-        "SELECT round_id, sender_ic, recipient, crime, fine, timestamp FROM citation".to_string();
+        "SELECT round_id, sender_ic, recipient, crime, crime_desc, fine, timestamp FROM citation WHERE fine IS NOT NULL".to_string();
 
     if round_id.is_some() {
-        sql.push_str(" WHERE round_id < ?");
+        sql.push_str(" AND round_id < ?");
     }
 
     sql.push_str(" ORDER BY timestamp DESC LIMIT ? OFFSET ?");
@@ -221,11 +222,12 @@ pub async fn get_citations(
         while let Some(row) = rows.next().await {
             let citation = row?;
 
-            let citation = Citation {
+            let citation = Crime {
                 round_id: citation.try_get("round_id")?,
                 sender: citation.try_get("sender_ic")?,
                 recipient: citation.try_get("recipient")?,
                 crime: citation.try_get("crime")?,
+                crime_desc: citation.try_get("crime_desc")?,
                 fine: citation.try_get("fine")?,
                 timestamp: citation.try_get("timestamp")?,
             };
@@ -237,6 +239,78 @@ pub async fn get_citations(
     connection.close().await?;
 
     Ok((citations, total_count))
+}
+
+pub async fn get_crimes(
+    fetch_size: Option<i32>,
+    page: Option<i32>,
+    config: &Config,
+    pool: &MySqlPool,
+) -> Result<(Vec<Crime>, i64), Error> {
+    let round_id = get_round_id(config).await?;
+
+    let fetch_size = fetch_size.unwrap_or(20);
+    let page = page.unwrap_or(1);
+    let offset = (page - 1) * fetch_size;
+
+    let mut connection = pool.acquire().await?;
+
+    let mut sql = "SELECT COUNT(*) FROM citation WHERE fine IS NULL".to_string();
+
+    if round_id.is_some() {
+        sql.push_str(" AND round_id < ?");
+    }
+
+    let mut query = sqlx::query_scalar(&sql);
+
+    if let Some(round_id) = round_id {
+        query = query.bind(round_id);
+    }
+
+    let total_count = query.fetch_one(&mut *connection).await?;
+
+    let mut sql =
+        "SELECT round_id, sender_ic, recipient, crime, crime_desc, fine, timestamp FROM citation WHERE fine IS NULL".to_string();
+
+    if round_id.is_some() {
+        sql.push_str(" AND round_id < ?");
+    }
+
+    sql.push_str(" ORDER BY timestamp DESC LIMIT ? OFFSET ?");
+
+    let mut query = sqlx::query(&sql);
+
+    if let Some(round_id) = round_id {
+        query = query.bind(round_id);
+    }
+
+    query = query.bind(fetch_size).bind(offset);
+
+    let mut crimes = Vec::new();
+
+    {
+        let mut rows = connection.fetch(query);
+
+        while let Some(row) = rows.next().await {
+            let crime = row?;
+
+            let crime = Crime {
+                round_id: crime.try_get("round_id")?,
+                sender: crime.try_get("sender_ic")?,
+                recipient: crime.try_get("recipient")?,
+                crime: crime.try_get("crime")?,
+                crime_desc: crime.try_get("crime_desc")?,
+                fine: crime.try_get("fine")?,
+                timestamp: crime.try_get("timestamp")?,
+            };
+
+            crimes.push(crime);
+        }
+    }
+
+    connection.close().await?;
+
+    Ok((crimes, total_count))
 }
 
 pub async fn get_deaths_overview(
@@ -285,10 +359,11 @@ pub async fn get_citations_overview(
     exclude_round: Option<i32>,
     connection: &mut PoolConnection<MySql>,
 ) -> Result<HashMap<u32, i64>, Error> {
-    let mut sql = "SELECT round_id, COUNT(*) as citations FROM citation".to_string();
+    let mut sql =
+        "SELECT round_id, COUNT(*) as citations FROM citation WHERE fine IS NOT NULL".to_string();
 
     if exclude_round.is_some() {
-        sql.push_str(" WHERE round_id < ? AND round_id >= ?");
+        sql.push_str(" AND round_id < ? AND round_id >= ?");
     }
 
     sql.push_str(" GROUP BY round_id ORDER BY round_id DESC LIMIT ?");
@@ -319,6 +394,48 @@ pub async fn get_citations_overview(
     }
 
     Ok(citations)
+}
+
+pub async fn get_crimes_overview(
+    limit: i32,
+    exclude_round: Option<i32>,
+    connection: &mut PoolConnection<MySql>,
+) -> Result<HashMap<u32, i64>, Error> {
+    let mut sql =
+        "SELECT round_id, COUNT(*) as crimes FROM citation WHERE fine IS NULL".to_string();
+
+    if exclude_round.is_some() {
+        sql.push_str(" AND round_id < ? AND round_id >= ?");
+    }
+
+    sql.push_str(" GROUP BY round_id ORDER BY round_id DESC LIMIT ?");
+
+    let mut query = sqlx::query(&sql);
+
+    if let Some(round_id) = exclude_round {
+        query = query.bind(round_id).bind(round_id - limit);
+    }
+
+    query = query.bind(limit);
+
+    let mut crimes = HashMap::new();
+
+    {
+        let mut rows = connection.fetch(query);
+
+        while let Some(row) = rows.next().await {
+            let crime = row?;
+
+            let round_id = crime.try_get("round_id")?;
+            let crimes_ = crime.try_get("crimes")?;
+
+            if let Some(round_id) = round_id {
+                crimes.insert(round_id, crimes_);
+            }
+        }
+    }
+
+    Ok(crimes)
 }
 
 pub async fn get_rounds_overview(
@@ -435,8 +552,9 @@ pub struct Overview {
     pub duration: i64,
     #[serde(with = "crate::serde::datetime")]
     pub time: NaiveDateTime,
-    pub deaths: i64,
     pub citations: i64,
+    pub crimes: i64,
+    pub deaths: i64,
     pub players: u32,
     pub threat_level: i32,
     pub readied_players: i32,
@@ -454,6 +572,7 @@ pub async fn get_overview(
     let rounds = get_rounds_overview(limit, exclude_round, &mut connection).await?;
     let deaths = get_deaths_overview(limit, exclude_round, &mut connection).await?;
     let citations = get_citations_overview(limit, exclude_round, &mut connection).await?;
+    let crimes = get_crimes_overview(limit, exclude_round, &mut connection).await?;
     let players = get_players_overview(limit, exclude_round, &mut connection).await?;
     let threat_levels = get_threat_overview(limit, exclude_round, &mut connection).await?;
 
@@ -467,6 +586,7 @@ pub async fn get_overview(
 
         let deaths = *deaths.get(round_id).unwrap_or(&0);
         let citations = *citations.get(round_id).unwrap_or(&0);
+        let crimes = *crimes.get(round_id).unwrap_or(&0);
         let players = *players.get(round_id).unwrap_or(&0);
         let (threat_level, readied_players) = *threat_levels.get(round_id).unwrap_or(&(0, 0));
 
@@ -476,6 +596,7 @@ pub async fn get_overview(
             time,
             deaths,
             citations,
+            crimes,
             players,
             threat_level,
             readied_players,
