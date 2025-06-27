@@ -13,6 +13,7 @@ mod routes;
 mod serde;
 
 #[rocket::main]
+#[allow(clippy::result_large_err)]
 async fn main() -> Result<(), Error> {
     let subscriber = tracing_subscriber::fmt().finish();
     tracing::subscriber::set_global_default(subscriber)?;
