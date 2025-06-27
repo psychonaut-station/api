@@ -57,5 +57,5 @@ jobs:
         with:
           name: ${{ matrix.name }}
           path: |
-            target/${{ matrix.rust-target }}/release/api${{ matrix.ext }}
+            target/${{ matrix.rust-target }}/release/psychonaut-api${{ matrix.ext }}
           if-no-files-found: error
