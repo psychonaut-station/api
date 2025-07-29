@@ -21,8 +21,8 @@ pub struct Feedback {
 }
 
 pub async fn get_feedback(
-    key_name: &str,
     key_type: &str,
+    key_name: &str,
     limit: i32,
     exclude_round: Option<i32>,
     connection: &mut PoolConnection<MySql>,
@@ -183,7 +183,7 @@ pub async fn get_citations(
 
     let mut connection = pool.acquire().await?;
 
-    let mut sql = "SELECT COUNT(*) FROM citation WHERE fine IS NOT NULL".to_string();
+    let mut sql = "SELECT COUNT(*) FROM citation WHERE fine IS NOT NULL AND fine != 0".to_string();
 
     if round_id.is_some() {
         sql.push_str(" AND round_id < ?");
@@ -198,7 +198,7 @@ pub async fn get_citations(
     let total_count = query.fetch_one(&mut *connection).await?;
 
     let mut sql =
-        "SELECT round_id, sender_ic, recipient, crime, crime_desc, fine, timestamp FROM citation WHERE fine IS NOT NULL".to_string();
+        "SELECT round_id, sender_ic, recipient, crime, crime_desc, fine, timestamp FROM citation WHERE fine IS NOT NULL AND fine != 0".to_string();
 
     if round_id.is_some() {
         sql.push_str(" AND round_id < ?");
@@ -255,7 +255,7 @@ pub async fn get_crimes(
 
     let mut connection = pool.acquire().await?;
 
-    let mut sql = "SELECT COUNT(*) FROM citation WHERE fine IS NULL".to_string();
+    let mut sql = "SELECT COUNT(*) FROM citation WHERE fine IS NULL OR fine = 0".to_string();
 
     if round_id.is_some() {
         sql.push_str(" AND round_id < ?");
@@ -270,7 +270,7 @@ pub async fn get_crimes(
     let total_count = query.fetch_one(&mut *connection).await?;
 
     let mut sql =
-        "SELECT round_id, sender_ic, recipient, crime, crime_desc, fine, timestamp FROM citation WHERE fine IS NULL".to_string();
+        "SELECT round_id, sender_ic, recipient, crime, crime_desc, fine, timestamp FROM citation WHERE fine IS NULL OR fine = 0".to_string();
 
     if round_id.is_some() {
         sql.push_str(" AND round_id < ?");
@@ -360,7 +360,7 @@ pub async fn get_citations_overview(
     connection: &mut PoolConnection<MySql>,
 ) -> Result<HashMap<u32, i64>, Error> {
     let mut sql =
-        "SELECT round_id, COUNT(*) as citations FROM citation WHERE fine IS NOT NULL".to_string();
+        "SELECT round_id, COUNT(*) as citations FROM citation WHERE fine IS NOT NULL AND fine != 0".to_string();
 
     if exclude_round.is_some() {
         sql.push_str(" AND round_id < ? AND round_id >= ?");
@@ -402,7 +402,7 @@ pub async fn get_crimes_overview(
     connection: &mut PoolConnection<MySql>,
 ) -> Result<HashMap<u32, i64>, Error> {
     let mut sql =
-        "SELECT round_id, COUNT(*) as crimes FROM citation WHERE fine IS NULL".to_string();
+        "SELECT round_id, COUNT(*) as crimes FROM citation WHERE fine IS NULL OR fine = 0".to_string();
 
     if exclude_round.is_some() {
         sql.push_str(" AND round_id < ? AND round_id >= ?");
@@ -488,8 +488,8 @@ pub async fn get_players_overview(
     connection: &mut PoolConnection<MySql>,
 ) -> Result<HashMap<u32, u32>, Error> {
     let feedback = get_feedback(
-        "round_end_stats",
         "nested tally",
+        "round_end_stats",
         limit,
         exclude_round,
         connection,
@@ -517,8 +517,8 @@ pub async fn get_threat_overview(
     connection: &mut PoolConnection<MySql>,
 ) -> Result<HashMap<u32, (i32, i32)>, Error> {
     let feedback = get_feedback(
-        "dynamic_threat",
         "associative",
+        "dynamic_tier",
         limit,
         exclude_round,
         connection,
@@ -528,7 +528,7 @@ pub async fn get_threat_overview(
     let mut threats = HashMap::new();
 
     for feedback in &feedback {
-        let threat_level = feedback.json["data"]["1"]["threat_level"]
+        let dynamic_tier = feedback.json["data"]["1"]["tier"]
             .as_str()
             .and_then(|s| s.parse::<i32>().ok())
             .unwrap_or(0);
@@ -539,7 +539,7 @@ pub async fn get_threat_overview(
             .unwrap_or(0);
 
         if let Some(round_id) = feedback.round_id {
-            threats.insert(round_id, (threat_level, readied_players));
+            threats.insert(round_id, (dynamic_tier, readied_players));
         }
     }
 
@@ -556,7 +556,7 @@ pub struct Overview {
     pub crimes: i64,
     pub deaths: i64,
     pub players: u32,
-    pub threat_level: i32,
+    pub dynamic_tier: i32,
     pub readied_players: i32,
 }
 
@@ -588,7 +588,7 @@ pub async fn get_overview(
         let citations = *citations.get(round_id).unwrap_or(&0);
         let crimes = *crimes.get(round_id).unwrap_or(&0);
         let players = *players.get(round_id).unwrap_or(&0);
-        let (threat_level, readied_players) = *threat_levels.get(round_id).unwrap_or(&(0, 0));
+        let (dynamic_tier, readied_players) = *threat_levels.get(round_id).unwrap_or(&(0, 0));
 
         let overview_ = Overview {
             round_id: *round_id,
@@ -598,7 +598,7 @@ pub async fn get_overview(
             citations,
             crimes,
             players,
-            threat_level,
+            dynamic_tier,
             readied_players,
         };
 
