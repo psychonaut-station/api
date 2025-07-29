@@ -360,7 +360,8 @@ pub async fn get_citations_overview(
     connection: &mut PoolConnection<MySql>,
 ) -> Result<HashMap<u32, i64>, Error> {
     let mut sql =
-        "SELECT round_id, COUNT(*) as citations FROM citation WHERE fine IS NOT NULL AND fine != 0".to_string();
+        "SELECT round_id, COUNT(*) as citations FROM citation WHERE fine IS NOT NULL AND fine != 0"
+            .to_string();
 
     if exclude_round.is_some() {
         sql.push_str(" AND round_id < ? AND round_id >= ?");
@@ -402,7 +403,8 @@ pub async fn get_crimes_overview(
     connection: &mut PoolConnection<MySql>,
 ) -> Result<HashMap<u32, i64>, Error> {
     let mut sql =
-        "SELECT round_id, COUNT(*) as crimes FROM citation WHERE fine IS NULL OR fine = 0".to_string();
+        "SELECT round_id, COUNT(*) as crimes FROM citation WHERE fine IS NULL OR fine = 0"
+            .to_string();
 
     if exclude_round.is_some() {
         sql.push_str(" AND round_id < ? AND round_id >= ?");
