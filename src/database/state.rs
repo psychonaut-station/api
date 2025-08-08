@@ -12,10 +12,7 @@ pub struct Database {
 pub struct ServerDatabase(pub Database);
 
 impl Database {
-    pub fn new(
-        config: &config::Database,
-        database: &str,
-    ) -> Result<Self, sqlx::Error> {
+    pub fn new(config: &config::Database, database: &str) -> Result<Self, sqlx::Error> {
         let options = MySqlPoolOptions::new()
             .min_connections(5)
             .max_connections(10)

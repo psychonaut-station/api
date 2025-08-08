@@ -1,6 +1,5 @@
-use rocket::{get, post, serde::json, http::Status, State};
+use rocket::{get, http::Status, post, serde::json, State};
 use serde::Deserialize;
-use tracing::info;
 
 use crate::{database::*, Database};
 

@@ -151,7 +151,11 @@ pub async fn get_jobs(job: &str, pool: &MySqlPool) -> Result<Vec<String>, Error>
     Ok(jobs)
 }
 
-pub async fn get_ckeys(ckey: &str, pool: &MySqlPool, api_pool: &MySqlPool) -> Result<Vec<String>, Error> {
+pub async fn get_ckeys(
+    ckey: &str,
+    pool: &MySqlPool,
+    api_pool: &MySqlPool
+) -> Result<Vec<String>, Error> {
     let mut connection = pool.acquire().await?;
 
     let query = sqlx::query("SELECT ckey FROM player WHERE ckey LIKE ? ORDER BY ckey LIMIT 25")
@@ -394,10 +398,8 @@ pub async fn get_achievements(ckey: &str, pool: &MySqlPool) -> Result<Vec<Achiev
 pub async fn ignore_ckey(ckey: &str, pool: &MySqlPool) -> Result<String, Error> {
     let mut connection = pool.acquire().await?;
 
-    let query = sqlx::query(
-        "INSERT INTO ignored_ckeys_autocomplete (ckey, valid) VALUES (?, 1)",
-    )
-    .bind(ckey.to_lowercase());
+    let query = sqlx::query("INSERT INTO ignored_ckeys_autocomplete (ckey, valid) VALUES (?, 1)")
+        .bind(ckey.to_lowercase());
 
     connection.execute(query).await?;
     connection.close().await?;
@@ -408,8 +410,7 @@ pub async fn ignore_ckey(ckey: &str, pool: &MySqlPool) -> Result<String, Error> 
 pub async fn unignore_ckey(ckey: &str, pool: &MySqlPool) -> Result<String, Error> {
     let mut connection = pool.acquire().await?;
 
-    let query =
-        sqlx::query("UPDATE ignored_ckeys_autocomplete SET valid = 0 WHERE ckey = ? AND valid = 1")
+    let query = sqlx::query("UPDATE ignored_ckeys_autocomplete SET valid = 0 WHERE ckey = ? AND valid = 1")
         .bind(ckey.to_lowercase());
 
     connection.execute(query).await?;
@@ -421,10 +422,8 @@ pub async fn unignore_ckey(ckey: &str, pool: &MySqlPool) -> Result<String, Error
 pub async fn check_ignored(ckey: &str, pool: &MySqlPool) -> Result<bool, Error> {
     let mut connection = pool.acquire().await?;
 
-    let query = sqlx::query(
-        "SELECT 1 FROM ignored_ckeys_autocomplete WHERE ckey = ? AND valid = 1 ORDER BY id DESC LIMIT 1"
-    )
-    .bind(ckey.to_lowercase());
+    let query = sqlx::query("SELECT 1 FROM ignored_ckeys_autocomplete WHERE ckey = ? AND valid = 1 ORDER BY id DESC LIMIT 1")
+        .bind(ckey.to_lowercase());
 
     let row = connection.fetch_optional(query).await?;
 
