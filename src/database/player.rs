@@ -404,7 +404,7 @@ pub async fn ignore_ckey(ckey: &str, pool: &MySqlPool) -> Result<String, Error> 
     connection.execute(query).await?;
     connection.close().await?;
 
-    return Ok(format!("@{ckey}"));
+    Ok(format!("@{ckey}"))
 }
 
 pub async fn unignore_ckey(ckey: &str, pool: &MySqlPool) -> Result<String, Error> {
@@ -417,7 +417,7 @@ pub async fn unignore_ckey(ckey: &str, pool: &MySqlPool) -> Result<String, Error
     connection.execute(query).await?;
     connection.close().await?;
 
-    return Ok(format!("@{ckey}"));
+    Ok(format!("@{ckey}"))
 }
 
 pub async fn check_ignored(ckey: &str, pool: &MySqlPool) -> Result<bool, Error> {
