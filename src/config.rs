@@ -33,6 +33,7 @@ pub struct Database {
     pub host: IpAddr,
     pub port: u16,
     pub database: String,
+    pub server_database: String,
 }
 
 #[derive(Debug, Deserialize)]

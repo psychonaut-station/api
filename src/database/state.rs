@@ -9,8 +9,13 @@ pub struct Database {
     pub pool: MySqlPool,
 }
 
+pub struct ServerDatabase(pub Database);
+
 impl Database {
-    pub fn new(config: &config::Database) -> Result<Self, sqlx::Error> {
+    pub fn new(
+        config: &config::Database,
+        database: &str,
+    ) -> Result<Self, sqlx::Error> {
         let options = MySqlPoolOptions::new()
             .min_connections(5)
             .max_connections(10)
@@ -24,7 +29,7 @@ impl Database {
             encode(&config.password),
             config.host,
             config.port,
-            config.database
+            database
         );
 
         let pool = options.connect_lazy(&url)?;

@@ -2,7 +2,7 @@ use rocket::{catch, catchers, http::Status, Config as RocketConfig, Request};
 use thiserror::Error;
 use tracing::info;
 
-use crate::{config::Config, cors::cors, database::Database};
+use crate::{config::Config, cors::cors, database::{Database, ServerDatabase}};
 
 mod byond;
 mod config;
@@ -19,7 +19,8 @@ async fn main() -> Result<(), Error> {
     tracing::subscriber::set_global_default(subscriber)?;
 
     let config = Config::read_from_file()?;
-    let database = Database::new(&config.database)?;
+    let database = Database::new(&config.database, &config.database.database)?;
+    let server_db = ServerDatabase(Database::new(&config.database, &config.database.server_database)?);
 
     info!(
         "Server has launched from http://{}:{}",
@@ -38,6 +39,7 @@ async fn main() -> Result<(), Error> {
         .attach(cors()?)
         .manage(config)
         .manage(database)
+        .manage(server_db)
         .register("/", catchers![empty_catcher]);
 
     let rocket = routes::mount(rocket);

@@ -1,4 +1,6 @@
-use rocket::{get, http::Status, State};
+use rocket::{get, post, serde::json, http::Status, State};
+use serde::Deserialize;
+use tracing::info;
 
 use crate::{database::*, Database};
 
@@ -21,9 +23,10 @@ pub async fn job(
 pub async fn ckey(
     ckey: &str,
     database: &State<Database>,
+    api_database: &State<ServerDatabase>,
     _api_key: ApiKey,
 ) -> Result<Json<Vec<String>>, Status> {
-    let Ok(ckeys) = get_ckeys(ckey, &database.pool).await else {
+    let Ok(ckeys) = get_ckeys(ckey, &database.pool, &api_database.0.pool).await else {
         return Err(Status::InternalServerError);
     };
 
@@ -41,4 +44,33 @@ pub async fn ic_name(
     };
 
     Ok(Json::Ok(ic_names))
+}
+
+#[derive(Deserialize)]
+pub struct IgnoreData<'r> {
+    ckey: &'r str,
+}
+
+#[post("/autocomplete/ckey/ignore", data = "<data>")]
+pub async fn ignore_autocomplete(
+    data: json::Json<IgnoreData<'_>>,
+    database: &State<ServerDatabase>,
+    _api_key: ApiKey,
+) -> Result<Json<String>, Status> {
+    match ignore_ckey(data.ckey, &database.0.pool).await {
+        Ok(account) => Ok(Json::Ok(account)),
+        Err(_) => Err(Status::InternalServerError),
+    }
+}
+
+#[post("/autocomplete/ckey/unignore", data = "<data>")]
+pub async fn unignore_autocomplete(
+    data: json::Json<IgnoreData<'_>>,
+    database: &State<ServerDatabase>,
+    _api_key: ApiKey,
+) -> Result<Json<String>, Status> {
+    match unignore_ckey(data.ckey, &database.0.pool).await {
+        Ok(account) => Ok(Json::Ok(account)),
+        Err(_) => Err(Status::InternalServerError),
+    }
 }
