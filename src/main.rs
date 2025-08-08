@@ -5,7 +5,8 @@ use tracing::info;
 use crate::{
     config::Config,
     cors::cors,
-    database::{Database, ServerDatabase}};
+    database::{Database, ServerDatabase},
+};
 
 mod byond;
 mod config;
@@ -25,7 +26,7 @@ async fn main() -> Result<(), Error> {
     let database = Database::new(&config.database, &config.database.database)?;
     let server_db = ServerDatabase(Database::new(
         &config.database,
-        &config.database.server_database
+        &config.database.server_database,
     )?);
 
     info!(

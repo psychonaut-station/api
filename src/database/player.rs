@@ -154,7 +154,7 @@ pub async fn get_jobs(job: &str, pool: &MySqlPool) -> Result<Vec<String>, Error>
 pub async fn get_ckeys(
     ckey: &str,
     pool: &MySqlPool,
-    api_pool: &MySqlPool
+    api_pool: &MySqlPool,
 ) -> Result<Vec<String>, Error> {
     let mut connection = pool.acquire().await?;
 
@@ -398,8 +398,9 @@ pub async fn get_achievements(ckey: &str, pool: &MySqlPool) -> Result<Vec<Achiev
 pub async fn ignore_ckey(ckey: &str, pool: &MySqlPool) -> Result<String, Error> {
     let mut connection = pool.acquire().await?;
 
-    let query = sqlx::query("INSERT INTO ignored_ckeys_autocomplete (ckey, valid) VALUES (?, 1)")
-        .bind(ckey.to_lowercase());
+    let query =
+        sqlx::query("INSERT INTO ignored_ckeys_autocomplete (ckey, valid) VALUES (?, 1)")
+            .bind(ckey.to_lowercase());
 
     connection.execute(query).await?;
     connection.close().await?;
