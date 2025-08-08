@@ -398,9 +398,8 @@ pub async fn get_achievements(ckey: &str, pool: &MySqlPool) -> Result<Vec<Achiev
 pub async fn ignore_ckey(ckey: &str, pool: &MySqlPool) -> Result<String, Error> {
     let mut connection = pool.acquire().await?;
 
-    let query =
-        sqlx::query("INSERT INTO ignored_ckeys_autocomplete (ckey, valid) VALUES (?, 1)")
-            .bind(ckey.to_lowercase());
+    let query = sqlx::query("INSERT INTO ignored_ckeys_autocomplete (ckey, valid) VALUES (?, 1)")
+        .bind(ckey.to_lowercase());
 
     connection.execute(query).await?;
     connection.close().await?;
@@ -411,8 +410,9 @@ pub async fn ignore_ckey(ckey: &str, pool: &MySqlPool) -> Result<String, Error> 
 pub async fn unignore_ckey(ckey: &str, pool: &MySqlPool) -> Result<String, Error> {
     let mut connection = pool.acquire().await?;
 
-    let query = sqlx::query("UPDATE ignored_ckeys_autocomplete SET valid = 0 WHERE ckey = ? AND valid = 1")
-        .bind(ckey.to_lowercase());
+    let query =
+        sqlx::query("UPDATE ignored_ckeys_autocomplete SET valid = 0 WHERE ckey = ? AND valid = 1")
+            .bind(ckey.to_lowercase());
 
     connection.execute(query).await?;
     connection.close().await?;
