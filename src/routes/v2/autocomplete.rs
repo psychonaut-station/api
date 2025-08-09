@@ -1,7 +1,6 @@
-use rocket::{get, http::Status, post, serde::json, State};
-use serde::Deserialize;
+use rocket::{get, http::Status, post, State};
 
-use crate::{database::*, Database};
+use crate::{config::Config, database::*, Database};
 
 use super::{common::ApiKey, Json};
 
@@ -22,10 +21,10 @@ pub async fn job(
 pub async fn ckey(
     ckey: &str,
     database: &State<Database>,
-    api_database: &State<ServerDatabase>,
+    config: &State<Config>,
     _api_key: ApiKey,
 ) -> Result<Json<Vec<String>>, Status> {
-    let Ok(ckeys) = get_ckeys(ckey, &database.pool, &api_database.0.pool).await else {
+    let Ok(ckeys) = get_ckeys(ckey, &database.pool, config).await else {
         return Err(Status::InternalServerError);
     };
 
@@ -45,31 +44,30 @@ pub async fn ic_name(
     Ok(Json::Ok(ic_names))
 }
 
-#[derive(Deserialize)]
-pub struct IgnoreData<'r> {
-    ckey: &'r str,
-}
-
-#[post("/autocomplete/ckey/ignore", data = "<data>")]
-pub async fn ignore_autocomplete(
-    data: json::Json<IgnoreData<'_>>,
-    database: &State<ServerDatabase>,
+#[post("/autocomplete/ckey/hide?<ckey>&<hid_by>")]
+pub async fn hide_ckey_autocomplete(
+    ckey: &str,
+    hid_by: i64,
+    database: &State<Database>,
+    config: &State<Config>,
     _api_key: ApiKey,
-) -> Result<Json<String>, Status> {
-    match ignore_ckey(data.ckey, &database.0.pool).await {
-        Ok(account) => Ok(Json::Ok(account)),
+) -> Result<Json<bool>, Status> {
+    match hide_ckey(ckey, hid_by, &database.pool, config).await {
+        Ok(success) => Ok(Json::Ok(success)),
         Err(_) => Err(Status::InternalServerError),
     }
 }
 
-#[post("/autocomplete/ckey/unignore", data = "<data>")]
-pub async fn unignore_autocomplete(
-    data: json::Json<IgnoreData<'_>>,
-    database: &State<ServerDatabase>,
+#[post("/autocomplete/ckey/unhide?<ckey>&<unhid_by>")]
+pub async fn unhide_ckey_autocomplete(
+    ckey: &str,
+    unhid_by: i64,
+    database: &State<Database>,
+    config: &State<Config>,
     _api_key: ApiKey,
-) -> Result<Json<String>, Status> {
-    match unignore_ckey(data.ckey, &database.0.pool).await {
-        Ok(account) => Ok(Json::Ok(account)),
+) -> Result<Json<bool>, Status> {
+    match unhide_ckey(ckey, unhid_by, &database.pool, config).await {
+        Ok(success) => Ok(Json::Ok(success)),
         Err(_) => Err(Status::InternalServerError),
     }
 }

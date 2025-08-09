@@ -32,8 +32,8 @@ pub struct Database {
     pub password: String,
     pub host: IpAddr,
     pub port: u16,
-    pub database: String,
-    pub server_database: String,
+    pub game_database: String,
+    pub api_database: String,
 }
 
 #[derive(Debug, Deserialize)]

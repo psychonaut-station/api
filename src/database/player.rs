@@ -4,6 +4,8 @@ use rocket::futures::StreamExt as _;
 use serde::Serialize;
 use sqlx::{pool::PoolConnection, Executor as _, FromRow, MySql, MySqlPool, Row as _};
 
+use crate::config::Config;
+
 use super::error::Error;
 
 #[derive(Debug, Serialize)]
@@ -154,12 +156,12 @@ pub async fn get_jobs(job: &str, pool: &MySqlPool) -> Result<Vec<String>, Error>
 pub async fn get_ckeys(
     ckey: &str,
     pool: &MySqlPool,
-    api_pool: &MySqlPool,
+    config: &Config,
 ) -> Result<Vec<String>, Error> {
     let mut connection = pool.acquire().await?;
 
-    let query = sqlx::query("SELECT ckey FROM player WHERE ckey LIKE ? ORDER BY ckey LIMIT 25")
-        .bind(format!("{ckey}%"));
+    let sql = format!("SELECT p.ckey FROM {}.player p LEFT JOIN {}.hid_ckeys_autocomplete i ON i.ckey = p.ckey WHERE p.ckey LIKE ? AND (i.ckey IS NULL OR i.valid IS FALSE) ORDER BY p.ckey LIMIT 25", config.database.game_database, config.database.api_database);
+    let query = sqlx::query(&sql).bind(format!("{ckey}%"));
 
     let mut ckeys = Vec::new();
 
@@ -169,11 +171,9 @@ pub async fn get_ckeys(
         while let Some(row) = rows.next().await {
             let row = row?;
 
-            let ckey: String = row.try_get("ckey")?;
+            let ckey = row.try_get("ckey")?;
 
-            if !check_ignored(&ckey, api_pool).await? {
-                ckeys.push(ckey);
-            }
+            ckeys.push(ckey);
         }
     }
 
@@ -395,40 +395,42 @@ pub async fn get_achievements(ckey: &str, pool: &MySqlPool) -> Result<Vec<Achiev
     Ok(achievements)
 }
 
-pub async fn ignore_ckey(ckey: &str, pool: &MySqlPool) -> Result<String, Error> {
+pub async fn hide_ckey(
+    ckey: &str,
+    hid_by: i64,
+    pool: &MySqlPool,
+    config: &Config,
+) -> Result<bool, Error> {
     let mut connection = pool.acquire().await?;
 
-    let query = sqlx::query("INSERT INTO ignored_ckeys_autocomplete (ckey, valid) VALUES (?, 1)")
-        .bind(ckey.to_lowercase());
+    let sql = format!(
+        "INSERT INTO {}.hid_ckeys_autocomplete (ckey, hid_by, valid) VALUES (?, ?, 1)",
+        config.database.api_database
+    );
+    let query = sqlx::query(&sql).bind(ckey.to_lowercase()).bind(hid_by);
 
     connection.execute(query).await?;
     connection.close().await?;
 
-    Ok(format!("@{ckey}"))
+    Ok(true)
 }
 
-pub async fn unignore_ckey(ckey: &str, pool: &MySqlPool) -> Result<String, Error> {
+pub async fn unhide_ckey(
+    ckey: &str,
+    unhid_by: i64,
+    pool: &MySqlPool,
+    config: &Config,
+) -> Result<bool, Error> {
     let mut connection = pool.acquire().await?;
 
-    let query =
-        sqlx::query("UPDATE ignored_ckeys_autocomplete SET valid = 0 WHERE ckey = ? AND valid = 1")
-            .bind(ckey.to_lowercase());
+    let sql = format!(
+        "UPDATE {}.hid_ckeys_autocomplete SET valid = 0, unhid_by = ? WHERE ckey = ? AND valid = 1",
+        config.database.api_database
+    );
+    let query = sqlx::query(&sql).bind(unhid_by).bind(ckey.to_lowercase());
 
     connection.execute(query).await?;
     connection.close().await?;
 
-    Ok(format!("@{ckey}"))
-}
-
-pub async fn check_ignored(ckey: &str, pool: &MySqlPool) -> Result<bool, Error> {
-    let mut connection = pool.acquire().await?;
-
-    let query = sqlx::query("SELECT 1 FROM ignored_ckeys_autocomplete WHERE ckey = ? AND valid = 1 ORDER BY id DESC LIMIT 1")
-        .bind(ckey.to_lowercase());
-
-    let row = connection.fetch_optional(query).await?;
-
-    connection.close().await?;
-
-    Ok(row.is_some())
+    Ok(true)
 }
