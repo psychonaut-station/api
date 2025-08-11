@@ -24,7 +24,7 @@ impl Database {
             encode(&config.password),
             config.host,
             config.port,
-            config.database
+            config.game_database
         );
 
         let pool = options.connect_lazy(&url)?;

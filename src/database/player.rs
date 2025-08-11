@@ -4,6 +4,8 @@ use rocket::futures::StreamExt as _;
 use serde::Serialize;
 use sqlx::{pool::PoolConnection, Executor as _, FromRow, MySql, MySqlPool, Row as _};
 
+use crate::config::Config;
+
 use super::error::Error;
 
 #[derive(Debug, Serialize)]
@@ -151,11 +153,15 @@ pub async fn get_jobs(job: &str, pool: &MySqlPool) -> Result<Vec<String>, Error>
     Ok(jobs)
 }
 
-pub async fn get_ckeys(ckey: &str, pool: &MySqlPool) -> Result<Vec<String>, Error> {
+pub async fn get_ckeys(
+    ckey: &str,
+    pool: &MySqlPool,
+    config: &Config,
+) -> Result<Vec<String>, Error> {
     let mut connection = pool.acquire().await?;
 
-    let query = sqlx::query("SELECT ckey FROM player WHERE ckey LIKE ? ORDER BY ckey LIMIT 25")
-        .bind(format!("{ckey}%"));
+    let sql = format!("SELECT p.ckey FROM {}.player p LEFT JOIN {}.hid_ckeys_autocomplete i ON i.ckey = p.ckey WHERE p.ckey LIKE ? AND (i.ckey IS NULL OR i.valid IS FALSE) ORDER BY p.ckey LIMIT 25", config.database.game_database, config.database.api_database);
+    let query = sqlx::query(&sql).bind(format!("{ckey}%"));
 
     let mut ckeys = Vec::new();
 
@@ -387,4 +393,64 @@ pub async fn get_achievements(ckey: &str, pool: &MySqlPool) -> Result<Vec<Achiev
     connection.close().await?;
 
     Ok(achievements)
+}
+
+pub async fn hide_ckey(
+    ckey: &str,
+    hid_by: i64,
+    pool: &MySqlPool,
+    config: &Config,
+) -> Result<bool, Error> {
+    let mut connection = pool.acquire().await?;
+
+    let sql = format!(
+        "SELECT 1 FROM {}.hid_ckeys_autocomplete WHERE ckey = ? AND valid = 1",
+        config.database.api_database
+    );
+    let query = sqlx::query(&sql).bind(ckey.to_lowercase());
+
+    if connection.fetch_optional(query).await?.is_some() {
+        return Ok(false);
+    }
+
+    let sql = format!(
+        "INSERT INTO {}.hid_ckeys_autocomplete (ckey, hid_by, valid) VALUES (?, ?, 1)",
+        config.database.api_database
+    );
+    let query = sqlx::query(&sql).bind(ckey.to_lowercase()).bind(hid_by);
+
+    connection.execute(query).await?;
+    connection.close().await?;
+
+    Ok(true)
+}
+
+pub async fn unhide_ckey(
+    ckey: &str,
+    unhid_by: i64,
+    pool: &MySqlPool,
+    config: &Config,
+) -> Result<bool, Error> {
+    let mut connection = pool.acquire().await?;
+
+    let sql = format!(
+        "SELECT 1 FROM {}.hid_ckeys_autocomplete WHERE ckey = ? AND valid = 1",
+        config.database.api_database
+    );
+    let query = sqlx::query(&sql).bind(ckey.to_lowercase());
+
+    if connection.fetch_optional(query).await?.is_none() {
+        return Ok(false);
+    }
+
+    let sql = format!(
+        "UPDATE {}.hid_ckeys_autocomplete SET valid = 0, unhid_by = ? WHERE ckey = ? AND valid = 1",
+        config.database.api_database
+    );
+    let query = sqlx::query(&sql).bind(unhid_by).bind(ckey.to_lowercase());
+
+    connection.execute(query).await?;
+    connection.close().await?;
+
+    Ok(true)
 }

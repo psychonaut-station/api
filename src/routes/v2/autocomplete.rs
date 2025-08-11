@@ -1,6 +1,6 @@
-use rocket::{get, http::Status, State};
+use rocket::{get, http::Status, post, State};
 
-use crate::{database::*, Database};
+use crate::{config::Config, database::*, Database};
 
 use super::{common::ApiKey, Json};
 
@@ -21,9 +21,10 @@ pub async fn job(
 pub async fn ckey(
     ckey: &str,
     database: &State<Database>,
+    config: &State<Config>,
     _api_key: ApiKey,
 ) -> Result<Json<Vec<String>>, Status> {
-    let Ok(ckeys) = get_ckeys(ckey, &database.pool).await else {
+    let Ok(ckeys) = get_ckeys(ckey, &database.pool, config).await else {
         return Err(Status::InternalServerError);
     };
 
@@ -41,4 +42,34 @@ pub async fn ic_name(
     };
 
     Ok(Json::Ok(ic_names))
+}
+
+#[post("/autocomplete/ckey/hide?<ckey>&<hid_by>")]
+pub async fn hide_ckey_autocomplete(
+    ckey: &str,
+    hid_by: i64,
+    database: &State<Database>,
+    config: &State<Config>,
+    _api_key: ApiKey,
+) -> Result<Json<bool>, Status> {
+    match hide_ckey(ckey, hid_by, &database.pool, config).await {
+        Ok(true) => Ok(Json::Ok(true)),
+        Ok(false) => Err(Status::Conflict),
+        Err(_) => Err(Status::InternalServerError),
+    }
+}
+
+#[post("/autocomplete/ckey/unhide?<ckey>&<unhid_by>")]
+pub async fn unhide_ckey_autocomplete(
+    ckey: &str,
+    unhid_by: i64,
+    database: &State<Database>,
+    config: &State<Config>,
+    _api_key: ApiKey,
+) -> Result<Json<bool>, Status> {
+    match unhide_ckey(ckey, unhid_by, &database.pool, config).await {
+        Ok(true) => Ok(Json::Ok(true)),
+        Ok(false) => Err(Status::Conflict),
+        Err(_) => Err(Status::InternalServerError),
+    }
 }

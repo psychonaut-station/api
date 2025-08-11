@@ -35,6 +35,8 @@ pub fn mount(rocket: Rocket<Build>) -> Rocket<Build> {
             autocomplete::job,
             autocomplete::ckey,
             autocomplete::ic_name,
+            autocomplete::hide_ckey_autocomplete,
+            autocomplete::unhide_ckey_autocomplete,
             events::overview,
             events::citations,
             events::crimes,
