@@ -296,12 +296,12 @@ pub async fn get_ic_names(ic_name: &str, pool: &MySqlPool) -> Result<Vec<IcName>
 pub async fn get_characters(ckey: &str, pool: &MySqlPool) -> Result<Vec<(String, i64)>, Error> {
     let mut connection = pool.acquire().await?;
 
-    const EXCLUDED_ROLES: &str = "('Nightmare', 'Wizard', 'Nuclear Operative', 'Wizard (Midround)', 'Paradox Clone', 'Space Ninja', 'Fugitive', 'Syndicate Cyborg', 'Lone Operative', 'Maintenance Clown', 'Abductor', 'Operative (Midround)', 'Cyber Police', 'Syndicate Monkey Agent', 'apprentice', 'Glitch', 'Santa', 'Changeling', 'Changeling (Midround)', 'Syndicate Medical Cyborg', 'Operative Overwatch Agent', 'survivalist', 'Syndicate Assault Cyborg')";
+    const EXCLUDED_ROLES: &str = "('Operative', 'Wizard')";
 
     let query = sqlx::query(concatcp!(
-        "SELECT name, COUNT(*) AS times FROM death WHERE byondkey = ? AND special NOT IN ",
+        "SELECT character_name, COUNT(*) AS times FROM manifest WHERE ckey = ? AND special NOT IN ",
         EXCLUDED_ROLES,
-        " GROUP BY name ORDER BY times DESC"
+        " GROUP BY character_name ORDER BY times DESC"
     ))
     .bind(ckey.to_lowercase());
 
@@ -313,7 +313,7 @@ pub async fn get_characters(ckey: &str, pool: &MySqlPool) -> Result<Vec<(String,
         while let Some(row) = rows.next().await {
             let row = row?;
 
-            characters.push((row.try_get("name")?, row.try_get("times")?));
+            characters.push((row.try_get("character_name")?, row.try_get("times")?));
         }
     }
 
