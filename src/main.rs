@@ -1,4 +1,5 @@
 mod byond;
+mod cache;
 mod database;
 mod route;
 mod sqlxext;
@@ -13,6 +14,8 @@ use poem::{EndpointExt, Server, listener::TcpListener, middleware::AddData};
 use sqlx::{MySqlPool, mysql::MySqlPoolOptions};
 use urlencoding::encode;
 
+use crate::cache::Cache;
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
     let subscriber = tracing_subscriber::fmt().finish();
@@ -23,7 +26,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
         encode(db_pass)
     );
 
-    let app = route::route().with(AddData::new(pool(&db_url)));
+    let app = route::route()
+        .with(AddData::new(pool(&db_url)))
+        .with(AddData::new(Cache::default()));
 
     let socket = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 3000);
     let server = Server::new(TcpListener::bind(socket));

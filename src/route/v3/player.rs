@@ -7,10 +7,7 @@ use poem_openapi::{
 use sqlx::MySqlPool;
 use tracing::error;
 
-use crate::database::{
-    Error as DatabaseError,
-    player::{Player, get_player},
-};
+use crate::database::{Error as DatabaseError, Player, get_player};
 
 pub struct Endpoint;
 
@@ -18,7 +15,7 @@ pub struct Endpoint;
 impl Endpoint {
     #[oai(path = "/player/:ckey", method = "get")]
     async fn player(&self, ckey: Path<String>, pool: Data<&MySqlPool>) -> PlayerResponse {
-        match get_player(&ckey, *pool).await {
+        match get_player(&ckey, &pool).await {
             Ok(player) => PlayerResponse::Success(Json(player)),
             Err(e) => match e {
                 DatabaseError::PlayerNotFound => PlayerResponse::NotFound(e.into()),
