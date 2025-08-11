@@ -53,7 +53,8 @@ pub async fn hide_ckey_autocomplete(
     _api_key: ApiKey,
 ) -> Result<Json<bool>, Status> {
     match hide_ckey(ckey, hid_by, &database.pool, config).await {
-        Ok(success) => Ok(Json::Ok(success)),
+        Ok(true) => Ok(Json::Ok(true)),
+        Ok(false) => Err(Status::Conflict),
         Err(_) => Err(Status::InternalServerError),
     }
 }
@@ -67,7 +68,8 @@ pub async fn unhide_ckey_autocomplete(
     _api_key: ApiKey,
 ) -> Result<Json<bool>, Status> {
     match unhide_ckey(ckey, unhid_by, &database.pool, config).await {
-        Ok(success) => Ok(Json::Ok(success)),
+        Ok(true) => Ok(Json::Ok(true)),
+        Ok(false) => Err(Status::Conflict),
         Err(_) => Err(Status::InternalServerError),
     }
 }

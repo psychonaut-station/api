@@ -404,6 +404,16 @@ pub async fn hide_ckey(
     let mut connection = pool.acquire().await?;
 
     let sql = format!(
+        "SELECT 1 FROM {}.hid_ckeys_autocomplete WHERE ckey = ? AND valid = 1",
+        config.database.api_database
+    );
+    let query = sqlx::query(&sql).bind(ckey.to_lowercase());
+
+    if connection.fetch_optional(query).await?.is_some() {
+        return Ok(false);
+    }
+
+    let sql = format!(
         "INSERT INTO {}.hid_ckeys_autocomplete (ckey, hid_by, valid) VALUES (?, ?, 1)",
         config.database.api_database
     );
@@ -422,6 +432,16 @@ pub async fn unhide_ckey(
     config: &Config,
 ) -> Result<bool, Error> {
     let mut connection = pool.acquire().await?;
+
+    let sql = format!(
+        "SELECT 1 FROM {}.hid_ckeys_autocomplete WHERE ckey = ? AND valid = 1",
+        config.database.api_database
+    );
+    let query = sqlx::query(&sql).bind(ckey.to_lowercase());
+
+    if connection.fetch_optional(query).await?.is_none() {
+        return Ok(false);
+    }
 
     let sql = format!(
         "UPDATE {}.hid_ckeys_autocomplete SET valid = 0, unhid_by = ? WHERE ckey = ? AND valid = 1",
