@@ -8,8 +8,12 @@ use super::Result;
 
 #[derive(Object, Clone)]
 pub struct TestMerge {
+    /// The round ID of the test merge
     round_id: u32,
+    /// The date and time when the test merge occurred
+    /// in YYYY-MM-DD HH:MM:SS format
     datetime: String,
+    /// The list of pull request numbers that were merged in this test merge
     test_merges: Vec<u32>,
 }
 

@@ -19,7 +19,7 @@ impl Endpoint {
     #[oai(path = "/player/:ckey", method = "get")]
     async fn player(
         &self,
-        /// The player's unique ckey identifier
+        /// The player's ckey
         ckey: Path<String>,
         pool: Data<&MySqlPool>,
     ) -> PlayerResponse {
@@ -41,7 +41,7 @@ impl Endpoint {
     #[oai(path = "/player/:ckey/bans", method = "get")]
     async fn player_bans(
         &self,
-        /// The player's unique ckey identifier
+        /// The player's ckey
         ckey: Path<String>,
         /// Optional boolean to filter for permanent bans only
         permanent: Query<Option<bool>>,

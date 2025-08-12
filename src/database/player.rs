@@ -8,12 +8,22 @@ use super::{Error, Result};
 
 #[derive(Object)]
 pub struct Player {
+    /// The player's ckey
     pub ckey: String,
+    /// The player's BYOND key, if available
     pub byond_key: Option<String>,
+    /// The date and time when the player first joined the game
+    /// in YYYY-MM-DD HH:MM:SS format
     pub first_seen: String,
+    /// The date and time when the player was last seen
+    /// in YYYY-MM-DD HH:MM:SS format
     pub last_seen: String,
+    /// The round ID when the player first joined
     pub first_seen_round: Option<u32>,
+    /// The round ID when the player was last seen
     pub last_seen_round: Option<u32>,
+    /// The player's BYOND account age, if available
+    /// in YYYY-MM-DD format
     pub byond_age: Option<String>,
 }
 
@@ -46,15 +56,28 @@ pub async fn get_player(ckey: &str, pool: &MySqlPool) -> Result<Player> {
 
 #[derive(Object)]
 pub struct Ban {
+    /// The time the ban was issued in YYYY-MM-DD HH:MM:SS format
     pub bantime: String,
+    /// The round ID when the ban was issued
     pub round_id: Option<u32>,
+    /// The roles affected by the ban, comma-separated
     pub roles: Option<String>,
+    /// The expiration time of the ban, if applicable
+    /// in YYYY-MM-DD HH:MM:SS format, or null if permanent
     pub expiration_time: Option<String>,
+    /// The reason for the ban
     pub reason: String,
+    /// The ckey of the banned player
     pub ckey: Option<String>,
+    /// The ckey of the admin who issued the ban
     pub a_ckey: String,
+    /// Additional edits or notes about the ban
     pub edits: Option<String>,
+    /// The datetime when the ban was unbanned, if applicable
+    /// in YYYY-MM-DD HH:MM:SS format, or null if still banned
     pub unbanned_datetime: Option<String>,
+    /// The ckey of the admin who unbanned the player, if applicable
+    /// null if the player is still banned
     pub unbanned_ckey: Option<String>,
 }
 
