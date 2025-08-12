@@ -1,4 +1,4 @@
-use poem_openapi::{Object, OpenApi, Union, payload::Json};
+use poem_openapi::{ApiResponse, Object, OpenApi, Union, payload::Json};
 
 use crate::byond;
 
@@ -6,8 +6,11 @@ pub struct Endpoint;
 
 #[OpenApi]
 impl Endpoint {
+    /// /v3/server
+    ///
+    /// Retrieves the status of the game servers
     #[oai(path = "/server", method = "get")]
-    async fn server(&self) -> Json<Vec<Server>> {
+    async fn server(&self) -> ServerResponse {
         let servers = [Placeholder {
             name: "Server 1".to_string(),
             address: "10.253.0.1:3131".to_string(),
@@ -44,8 +47,15 @@ impl Endpoint {
             });
         }
 
-        Json(response)
+        ServerResponse::Success(Json(response))
     }
+}
+
+#[derive(ApiResponse)]
+enum ServerResponse {
+    /// Returns when server status successfully retrieved
+    #[oai(status = 200)]
+    Success(Json<Vec<Server>>),
 }
 
 #[derive(Union)]
