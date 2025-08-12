@@ -373,11 +373,6 @@ pub struct Achievement {
 pub async fn get_achievements(ckey: &str, achievement_type: Option<&str>, pool: &MySqlPool) -> Result<Vec<Achievement>, Error> {
     let mut connection = pool.acquire().await?;
 
-    if !player_exists(ckey, &mut connection).await {
-        connection.close().await?;
-        return Err(Error::PlayerNotFound);
-    }
-
     let mut sql = "SELECT achievement_metadata.*, achievements.value FROM achievements JOIN achievement_metadata ON achievements.achievement_key = achievement_metadata.achievement_key WHERE LOWER(achievements.ckey) = ?".to_string();
 
     if achievement_type.is_some() {
