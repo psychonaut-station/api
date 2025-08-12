@@ -1,4 +1,4 @@
-use futures::StreamExt as _;
+use futures::TryStreamExt as _;
 use poem_openapi::Object;
 use sqlx::{Executor as _, MySqlPool, Row as _};
 
@@ -24,16 +24,12 @@ pub async fn get_recent_test_merges(pool: &MySqlPool) -> Result<Vec<TestMerge>> 
 
     let mut rows = connection.fetch(query);
 
-    while let Some(row) = rows.next().await {
-        let row = row?;
-
-        let test_merge = TestMerge {
+    while let Some(row) = rows.try_next().await? {
+        recent_test_merges.push(TestMerge {
             round_id: row.try_get("round_id")?,
             datetime: row.try_get::<DateTime, _>("datetime")?.into(),
             test_merges: serde_json::from_str(row.try_get("test_merges")?)?,
-        };
-
-        recent_test_merges.push(test_merge);
+        });
     }
 
     Ok(recent_test_merges)

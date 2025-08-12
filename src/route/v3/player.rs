@@ -1,13 +1,13 @@
 use poem::web::Data;
 use poem_openapi::{
     ApiResponse, OpenApi,
-    param::Path,
+    param::{Path, Query},
     payload::{Json, PlainText},
 };
 use sqlx::MySqlPool;
 use tracing::error;
 
-use crate::database::{Error as DatabaseError, Player, get_player};
+use crate::database::{Ban, Error as DatabaseError, Player, get_player, get_player_bans};
 
 pub struct Endpoint;
 
@@ -26,12 +26,42 @@ impl Endpoint {
             },
         }
     }
+
+    #[oai(path = "/player/:ckey/bans", method = "get")]
+    async fn player_bans(
+        &self,
+        ckey: Path<String>,
+        permanent: Query<Option<bool>>,
+        #[oai(validator(pattern = "/\\d{4}-\\d{2}-\\d{2}/"))] since: Query<Option<String>>,
+        pool: Data<&MySqlPool>,
+    ) -> PlayerBansResponse {
+        match get_player_bans(&ckey, permanent.unwrap_or(false), &since, &pool).await {
+            Ok(bans) => PlayerBansResponse::Success(Json(bans)),
+            Err(e) => match e {
+                DatabaseError::PlayerNotFound => PlayerBansResponse::NotFound(e.into()),
+                _ => {
+                    error!("Error fetching bans for player `{}`: {e:?}", *ckey);
+                    PlayerBansResponse::InternalError(e.into())
+                }
+            },
+        }
+    }
 }
 
 #[derive(ApiResponse)]
 enum PlayerResponse {
     #[oai(status = 200)]
     Success(Json<Player>),
+    #[oai(status = 404)]
+    NotFound(PlainText<String>),
+    #[oai(status = 500)]
+    InternalError(PlainText<String>),
+}
+
+#[derive(ApiResponse)]
+enum PlayerBansResponse {
+    #[oai(status = 200)]
+    Success(Json<Vec<Ban>>),
     #[oai(status = 404)]
     NotFound(PlainText<String>),
     #[oai(status = 500)]
