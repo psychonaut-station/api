@@ -131,3 +131,21 @@ pub async fn achievements(
         Err(_) => Err(Status::InternalServerError),
     }
 }
+
+#[get("/player/lookup?<ckey>&<ip>&<cid>")]
+pub async fn lookup(
+    ckey: Option<&str>,
+    ip: Option<&str>,
+    cid: Option<i64>,
+    database: &State<Database>,
+    _api_key: ApiKey,
+) -> Result<Json<Value>, Status> {
+    if ckey.is_none() && ip.is_none() && cid.is_none() {
+        return Err(Status::BadRequest);
+    }
+
+    match lookup_player(ckey, ip, cid, &database.pool).await {
+        Ok(result) => Ok(Json::Ok(json!(result))),
+        Err(_) => Err(Status::InternalServerError),
+    }
+}

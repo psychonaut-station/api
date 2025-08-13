@@ -454,3 +454,62 @@ pub async fn unhide_ckey(
 
     Ok(true)
 }
+
+pub async fn lookup_player(
+    ckey: Option<&str>,
+    ip: Option<&str>,
+    cid: Option<i64>,
+    pool: &MySqlPool,
+) -> Result<Vec<(String, String, String)>, Error> {
+    let mut connection = pool.acquire().await?;
+
+    let mut sql =
+        "SELECT computerid, INET_NTOA(ip) AS ip, ckey FROM connection_log WHERE ".to_string();
+
+    if ckey.is_some() {
+        sql.push_str(
+            "computerid IN (SELECT DISTINCT computerid FROM connection_log WHERE ckey = ?) UNION
+            SELECT computerid, INET_NTOA(ip) AS ip, ckey FROM connection_log WHERE ip IN (SELECT DISTINCT ip FROM connection_log WHERE ckey = ?)",
+        );
+    } else if ip.is_some() {
+        sql.push_str(
+            "computerid IN (SELECT DISTINCT computerid FROM connection_log WHERE ip = INET_ATON(?)) UNION
+            SELECT computerid, INET_NTOA(ip) AS ip, ckey FROM connection_log WHERE ckey IN (SELECT DISTINCT ckey FROM connection_log WHERE ip = INET_ATON(?)))"
+        );
+    } else if cid.is_some() {
+        sql.push_str(
+            "ip IN (SELECT DISTINCT ip FROM connection_log WHERE computerid = ?) UNION
+            SELECT computerid, INET_NTOA(ip) AS ip, ckey FROM connection_log WHERE ckey IN (SELECT DISTINCT ckey FROM connection_log WHERE computerid = ?)"
+        );
+    } else {
+        unreachable!();
+    }
+
+    sql.push_str(" ORDER BY ckey, computerid, ip");
+
+    let mut query = sqlx::query(&sql);
+
+    if let Some(ckey) = ckey {
+        query = query.bind(ckey.to_lowercase()).bind(ckey.to_lowercase());
+    } else if let Some(ip) = ip {
+        query = query.bind(ip).bind(ip);
+    } else if let Some(cid) = cid {
+        query = query.bind(cid).bind(cid);
+    }
+
+    let mut rows = connection.fetch(query);
+
+    let mut result = Vec::new();
+
+    while let Some(row) = rows.next().await {
+        let row = row?;
+
+        let cid: String = row.try_get("computerid")?;
+        let ip: String = row.try_get("ip")?;
+        let ckey: String = row.try_get("ckey")?;
+
+        result.push((cid, ip, ckey));
+    }
+
+    Ok(result)
+}

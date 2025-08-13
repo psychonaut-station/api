@@ -26,6 +26,7 @@ pub fn mount(rocket: Rocket<Build>) -> Rocket<Build> {
             player::top,
             player::discord,
             player::achievements,
+            player::lookup,
             server::index,
             verify::index,
             verify::unverify,
