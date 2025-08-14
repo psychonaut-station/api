@@ -468,18 +468,18 @@ pub async fn lookup_player(
 
     if ckey.is_some() {
         sql.push_str(
-            "computerid IN (SELECT DISTINCT computerid FROM connection_log WHERE ckey = ?) UNION
-            SELECT computerid, INET_NTOA(ip) AS ip, ckey FROM connection_log WHERE ip IN (SELECT DISTINCT ip FROM connection_log WHERE ckey = ?)",
+            "(computerid IN (SELECT DISTINCT computerid FROM connection_log WHERE ckey = ?) OR
+             ip IN (SELECT DISTINCT ip FROM connection_log WHERE ckey = ?))",
         );
     } else if ip.is_some() {
         sql.push_str(
-            "computerid IN (SELECT DISTINCT computerid FROM connection_log WHERE ip = INET_ATON(?)) UNION
-            SELECT computerid, INET_NTOA(ip) AS ip, ckey FROM connection_log WHERE ckey IN (SELECT DISTINCT ckey FROM connection_log WHERE ip = INET_ATON(?)))"
+            "(computerid IN (SELECT DISTINCT computerid FROM connection_log WHERE ip = INET_ATON(?)) OR
+             ckey IN (SELECT DISTINCT ckey FROM connection_log WHERE ip = INET_ATON(?)))"
         );
     } else if cid.is_some() {
         sql.push_str(
-            "ip IN (SELECT DISTINCT ip FROM connection_log WHERE computerid = ?) UNION
-            SELECT computerid, INET_NTOA(ip) AS ip, ckey FROM connection_log WHERE ckey IN (SELECT DISTINCT ckey FROM connection_log WHERE computerid = ?)"
+            "(ip IN (SELECT DISTINCT ip FROM connection_log WHERE computerid = ?) OR
+             ckey IN (SELECT DISTINCT ckey FROM connection_log WHERE computerid = ?))",
         );
     } else {
         unreachable!();
