@@ -374,21 +374,57 @@ pub struct Achievement {
     pub achievement_name: Option<String>,
     pub achievement_description: Option<String>,
     pub value: Option<i32>,
+    #[serde(with = "crate::serde::datetime")]
+    pub timestamp: NaiveDateTime,
 }
 
-pub async fn get_achievements(ckey: &str, pool: &MySqlPool) -> Result<Vec<Achievement>, Error> {
+pub async fn get_achievements(
+    ckey: &str,
+    achievement_type: Option<&str>,
+    pool: &MySqlPool,
+) -> Result<Vec<Achievement>, Error> {
     let mut connection = pool.acquire().await?;
 
-    if !player_exists(ckey, &mut connection).await {
+    let mut sql = "SELECT a.value, a.last_updated, m.achievement_key, m.achievement_version, m.achievement_type, m.achievement_name, m.achievement_description FROM achievements a JOIN achievement_metadata m ON a.achievement_key = m.achievement_key WHERE LOWER(a.ckey) = ?".to_string();
+
+    if achievement_type.is_some() {
+        sql.push_str(" AND m.achievement_type = ?");
+    }
+
+    sql.push_str(" ORDER BY a.last_updated DESC");
+
+    let mut query = sqlx::query(&sql).bind(ckey.to_lowercase());
+
+    if let Some(achievement_type) = achievement_type {
+        query = query.bind(achievement_type);
+    }
+
+    let mut achievements = Vec::new();
+
+    {
+        let mut rows = connection.fetch(query);
+
+        while let Some(row) = rows.next().await {
+            let achievement = row?;
+
+            let achievement = Achievement {
+                achievement_key: achievement.try_get("achievement_key")?,
+                achievement_version: achievement.try_get("achievement_version")?,
+                achievement_type: achievement.try_get("achievement_type")?,
+                achievement_name: achievement.try_get("achievement_name")?,
+                achievement_description: achievement.try_get("achievement_description")?,
+                value: achievement.try_get("value")?,
+                timestamp: achievement.try_get("last_updated")?,
+            };
+
+            achievements.push(achievement);
+        }
+    }
+
+    if achievements.is_empty() && !player_exists(ckey, &mut connection).await {
         connection.close().await?;
         return Err(Error::PlayerNotFound);
     }
-
-    let query = sqlx::query_as(
-        "SELECT achievement_metadata.*, achievements.value FROM achievements JOIN achievement_metadata ON achievements.achievement_key = achievement_metadata.achievement_key WHERE LOWER(achievements.ckey) = ?"
-    ).bind(ckey.to_lowercase());
-
-    let achievements = query.fetch_all(&mut *connection).await?;
 
     connection.close().await?;
 

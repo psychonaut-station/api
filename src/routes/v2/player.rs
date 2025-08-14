@@ -119,13 +119,14 @@ pub async fn discord(
     unreachable!()
 }
 
-#[get("/player/achievements?<ckey>")]
+#[get("/player/achievements?<ckey>&<achievement_type>")]
 pub async fn achievements(
     ckey: &str,
+    achievement_type: Option<&str>,
     database: &State<Database>,
     _api_key: ApiKey,
 ) -> Result<Json<Value>, Status> {
-    match get_achievements(ckey, &database.pool).await {
+    match get_achievements(ckey, achievement_type, &database.pool).await {
         Ok(achievements) => Ok(Json::Ok(json!(achievements))),
         Err(Error::PlayerNotFound) => Err(Status::NotFound),
         Err(_) => Err(Status::InternalServerError),
