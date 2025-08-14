@@ -368,18 +368,20 @@ pub struct Achievement {
     pub achievement_name: Option<String>,
     pub achievement_description: Option<String>,
     pub value: Option<i32>,
+    #[serde(with = "crate::serde::datetime")]
+    pub timestamp: NaiveDateTime,
 }
 
 pub async fn get_achievements(ckey: &str, achievement_type: Option<&str>, pool: &MySqlPool) -> Result<Vec<Achievement>, Error> {
     let mut connection = pool.acquire().await?;
 
-    let mut sql = "SELECT achievement_metadata.*, achievements.value FROM achievements JOIN achievement_metadata ON achievements.achievement_key = achievement_metadata.achievement_key WHERE LOWER(achievements.ckey) = ?".to_string();
+    let mut sql = "SELECT achievements.value AS value, achievements.last_updated AS last_updated, achievement_metadata.achievement_key AS achievement_key, achievement_metadata.achievement_version AS achievement_version, achievement_metadata.achievement_type AS achievement_type, achievement_metadata.achievement_name AS achievement_name, achievement_metadata.achievement_description AS achievement_description FROM achievements JOIN achievement_metadata ON achievements.achievement_key = achievement_metadata.achievement_key WHERE LOWER(achievements.ckey) = ?".to_string();
 
     if achievement_type.is_some() {
         sql.push_str(" AND achievement_metadata.achievement_type = ?");
     }
 
-    sql.push_str("ORDER BY last_updated DESC");
+    sql.push_str(" ORDER BY achievements.last_updated DESC");
 
     let mut query = sqlx::query(&sql).bind(ckey.to_lowercase());
 
@@ -396,12 +398,13 @@ pub async fn get_achievements(ckey: &str, achievement_type: Option<&str>, pool: 
             let achievement = row?;
 
             let achievement = Achievement {
-                achievement_key: achievement.try_get("achievement_metadata.achievement_key")?,
-                achievement_version: achievement.try_get("achievement_metadata.achievement_key")?,
-                achievement_type: achievement.try_get("achievement_metadata.achievement_key")?,
-                achievement_name: achievement.try_get("achievement_metadata.achievement_key")?,
-                achievement_description: achievement.try_get("achievement_metadata.achievement_key")?,
-                value: achievement.try_get("achievements.value")?,
+                achievement_key: achievement.try_get("achievement_key")?,
+                achievement_version: achievement.try_get("achievement_version")?,
+                achievement_type: achievement.try_get("achievement_type")?,
+                achievement_name: achievement.try_get("achievement_name")?,
+                achievement_description: achievement.try_get("achievement_description")?,
+                value: achievement.try_get("value")?,
+                timestamp: achievement.try_get("last_updated")?,
             };
 
             achievements.push(achievement);
