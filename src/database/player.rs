@@ -4,6 +4,8 @@ use rocket::futures::StreamExt as _;
 use serde::Serialize;
 use sqlx::{pool::PoolConnection, Executor as _, FromRow, MySql, MySqlPool, Row as _};
 
+use crate::config::Config;
+
 use super::error::Error;
 
 #[derive(Debug, Serialize)]
@@ -151,11 +153,15 @@ pub async fn get_jobs(job: &str, pool: &MySqlPool) -> Result<Vec<String>, Error>
     Ok(jobs)
 }
 
-pub async fn get_ckeys(ckey: &str, pool: &MySqlPool) -> Result<Vec<String>, Error> {
+pub async fn get_ckeys(
+    ckey: &str,
+    pool: &MySqlPool,
+    config: &Config,
+) -> Result<Vec<String>, Error> {
     let mut connection = pool.acquire().await?;
 
-    let query = sqlx::query("SELECT ckey FROM player WHERE ckey LIKE ? ORDER BY ckey LIMIT 25")
-        .bind(format!("{ckey}%"));
+    let sql = format!("SELECT p.ckey FROM {}.player p LEFT JOIN {}.hid_ckeys_autocomplete i ON i.ckey = p.ckey WHERE p.ckey LIKE ? AND (i.ckey IS NULL OR i.valid IS FALSE) ORDER BY p.ckey LIMIT 25", config.database.game_database, config.database.api_database);
+    let query = sqlx::query(&sql).bind(format!("{ckey}%"));
 
     let mut ckeys = Vec::new();
 
@@ -296,12 +302,12 @@ pub async fn get_ic_names(ic_name: &str, pool: &MySqlPool) -> Result<Vec<IcName>
 pub async fn get_characters(ckey: &str, pool: &MySqlPool) -> Result<Vec<(String, i64)>, Error> {
     let mut connection = pool.acquire().await?;
 
-    const EXCLUDED_ROLES: &str = "('Nightmare', 'Wizard', 'Nuclear Operative', 'Wizard (Midround)', 'Paradox Clone', 'Space Ninja', 'Fugitive', 'Syndicate Cyborg', 'Lone Operative', 'Maintenance Clown', 'Abductor', 'Operative (Midround)', 'Cyber Police', 'Syndicate Monkey Agent', 'apprentice', 'Glitch', 'Santa', 'Changeling', 'Changeling (Midround)', 'Syndicate Medical Cyborg', 'Operative Overwatch Agent', 'survivalist', 'Syndicate Assault Cyborg')";
+    const EXCLUDED_ROLES: &str = "('Operative', 'Wizard')";
 
     let query = sqlx::query(concatcp!(
-        "SELECT name, COUNT(*) AS times FROM death WHERE byondkey = ? AND special NOT IN ",
+        "SELECT character_name, COUNT(*) AS times FROM manifest WHERE ckey = ? AND special NOT IN ",
         EXCLUDED_ROLES,
-        " GROUP BY name ORDER BY times DESC"
+        " GROUP BY character_name ORDER BY times DESC"
     ))
     .bind(ckey.to_lowercase());
 
@@ -313,7 +319,7 @@ pub async fn get_characters(ckey: &str, pool: &MySqlPool) -> Result<Vec<(String,
         while let Some(row) = rows.next().await {
             let row = row?;
 
-            characters.push((row.try_get("name")?, row.try_get("times")?));
+            characters.push((row.try_get("character_name")?, row.try_get("times")?));
         }
     }
 
@@ -423,4 +429,123 @@ pub async fn get_achievements(
     connection.close().await?;
 
     Ok(achievements)
+}
+
+pub async fn hide_ckey(
+    ckey: &str,
+    hid_by: i64,
+    pool: &MySqlPool,
+    config: &Config,
+) -> Result<bool, Error> {
+    let mut connection = pool.acquire().await?;
+
+    let sql = format!(
+        "SELECT 1 FROM {}.hid_ckeys_autocomplete WHERE ckey = ? AND valid = 1",
+        config.database.api_database
+    );
+    let query = sqlx::query(&sql).bind(ckey.to_lowercase());
+
+    if connection.fetch_optional(query).await?.is_some() {
+        return Ok(false);
+    }
+
+    let sql = format!(
+        "INSERT INTO {}.hid_ckeys_autocomplete (ckey, hid_by, valid) VALUES (?, ?, 1)",
+        config.database.api_database
+    );
+    let query = sqlx::query(&sql).bind(ckey.to_lowercase()).bind(hid_by);
+
+    connection.execute(query).await?;
+    connection.close().await?;
+
+    Ok(true)
+}
+
+pub async fn unhide_ckey(
+    ckey: &str,
+    unhid_by: i64,
+    pool: &MySqlPool,
+    config: &Config,
+) -> Result<bool, Error> {
+    let mut connection = pool.acquire().await?;
+
+    let sql = format!(
+        "SELECT 1 FROM {}.hid_ckeys_autocomplete WHERE ckey = ? AND valid = 1",
+        config.database.api_database
+    );
+    let query = sqlx::query(&sql).bind(ckey.to_lowercase());
+
+    if connection.fetch_optional(query).await?.is_none() {
+        return Ok(false);
+    }
+
+    let sql = format!(
+        "UPDATE {}.hid_ckeys_autocomplete SET valid = 0, unhid_by = ? WHERE ckey = ? AND valid = 1",
+        config.database.api_database
+    );
+    let query = sqlx::query(&sql).bind(unhid_by).bind(ckey.to_lowercase());
+
+    connection.execute(query).await?;
+    connection.close().await?;
+
+    Ok(true)
+}
+
+pub async fn lookup_player(
+    ckey: Option<&str>,
+    ip: Option<&str>,
+    cid: Option<i64>,
+    pool: &MySqlPool,
+) -> Result<Vec<(String, String, String)>, Error> {
+    let mut connection = pool.acquire().await?;
+
+    let mut sql =
+        "SELECT computerid, INET_NTOA(ip) AS ip, ckey FROM connection_log WHERE ".to_string();
+
+    if ckey.is_some() {
+        sql.push_str(
+            "(computerid IN (SELECT DISTINCT computerid FROM connection_log WHERE ckey = ?) OR
+             ip IN (SELECT DISTINCT ip FROM connection_log WHERE ckey = ?))",
+        );
+    } else if ip.is_some() {
+        sql.push_str(
+            "(computerid IN (SELECT DISTINCT computerid FROM connection_log WHERE ip = INET_ATON(?)) OR
+             ckey IN (SELECT DISTINCT ckey FROM connection_log WHERE ip = INET_ATON(?)))"
+        );
+    } else if cid.is_some() {
+        sql.push_str(
+            "(ip IN (SELECT DISTINCT ip FROM connection_log WHERE computerid = ?) OR
+             ckey IN (SELECT DISTINCT ckey FROM connection_log WHERE computerid = ?))",
+        );
+    } else {
+        unreachable!();
+    }
+
+    sql.push_str(" GROUP BY ORDER BY ckey, computerid, ip ORDER BY ckey, computerid, ip");
+
+    let mut query = sqlx::query(&sql);
+
+    if let Some(ckey) = ckey {
+        query = query.bind(ckey.to_lowercase()).bind(ckey.to_lowercase());
+    } else if let Some(ip) = ip {
+        query = query.bind(ip).bind(ip);
+    } else if let Some(cid) = cid {
+        query = query.bind(cid).bind(cid);
+    }
+
+    let mut rows = connection.fetch(query);
+
+    let mut result = Vec::new();
+
+    while let Some(row) = rows.next().await {
+        let row = row?;
+
+        let cid: String = row.try_get("computerid")?;
+        let ip: String = row.try_get("ip")?;
+        let ckey: String = row.try_get("ckey")?;
+
+        result.push((cid, ip, ckey));
+    }
+
+    Ok(result)
 }
