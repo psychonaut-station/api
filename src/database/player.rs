@@ -485,7 +485,7 @@ pub async fn lookup_player(
         unreachable!();
     }
 
-    sql.push_str(" ORDER BY ckey, computerid, ip");
+    sql.push_str(" GROUP BY ORDER BY ckey, computerid, ip ORDER BY ckey, computerid, ip");
 
     let mut query = sqlx::query(&sql);
 
