@@ -385,13 +385,13 @@ pub async fn get_achievements(
 ) -> Result<Vec<Achievement>, Error> {
     let mut connection = pool.acquire().await?;
 
-    let mut sql = "SELECT achievements.value AS value, achievements.last_updated AS last_updated, achievement_metadata.achievement_key AS achievement_key, achievement_metadata.achievement_version AS achievement_version, achievement_metadata.achievement_type AS achievement_type, achievement_metadata.achievement_name AS achievement_name, achievement_metadata.achievement_description AS achievement_description FROM achievements JOIN achievement_metadata ON achievements.achievement_key = achievement_metadata.achievement_key WHERE LOWER(achievements.ckey) = ?".to_string();
+    let mut sql = "SELECT a.value, a.last_updated, m.achievement_key, m.achievement_version, m.achievement_type, m.achievement_name, m.achievement_description FROM achievements a JOIN achievement_metadata m ON a.achievement_key = m.achievement_key WHERE LOWER(a.ckey) = ?".to_string();
 
     if achievement_type.is_some() {
-        sql.push_str(" AND achievement_metadata.achievement_type = ?");
+        sql.push_str(" AND m.achievement_type = ?");
     }
 
-    sql.push_str(" ORDER BY achievements.last_updated DESC");
+    sql.push_str(" ORDER BY a.last_updated DESC");
 
     let mut query = sqlx::query(&sql).bind(ckey.to_lowercase());
 
