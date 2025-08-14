@@ -375,7 +375,7 @@ pub struct Achievement {
 pub async fn get_achievements(
     ckey: &str,
     achievement_type: Option<&str>,
-    pool: &MySqlPool
+    pool: &MySqlPool,
 ) -> Result<Vec<Achievement>, Error> {
     let mut connection = pool.acquire().await?;
 
