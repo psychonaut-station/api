@@ -372,7 +372,11 @@ pub struct Achievement {
     pub timestamp: NaiveDateTime,
 }
 
-pub async fn get_achievements(ckey: &str, achievement_type: Option<&str>, pool: &MySqlPool) -> Result<Vec<Achievement>, Error> {
+pub async fn get_achievements(
+    ckey: &str,
+    achievement_type: Option<&str>,
+    pool: &MySqlPool
+) -> Result<Vec<Achievement>, Error> {
     let mut connection = pool.acquire().await?;
 
     let mut sql = "SELECT achievements.value AS value, achievements.last_updated AS last_updated, achievement_metadata.achievement_key AS achievement_key, achievement_metadata.achievement_version AS achievement_version, achievement_metadata.achievement_type AS achievement_type, achievement_metadata.achievement_name AS achievement_name, achievement_metadata.achievement_description AS achievement_description FROM achievements JOIN achievement_metadata ON achievements.achievement_key = achievement_metadata.achievement_key WHERE LOWER(achievements.ckey) = ?".to_string();
