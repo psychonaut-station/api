@@ -1,3 +1,4 @@
+mod lookup;
 mod player;
 mod recent_test_merges;
 mod roletime;
@@ -11,4 +12,4 @@ macro_rules! service {
     };
 }
 
-service!(player, recent_test_merges, roletime, server);
+service!(lookup, player, recent_test_merges, roletime, server);

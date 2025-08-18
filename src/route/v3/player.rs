@@ -95,7 +95,7 @@ impl Endpoint {
         /// Optional boolean to filter for permanent bans only
         permanent: Query<Option<bool>>,
         /// Optional date string (YYYY-MM-DD format) to filter bans after a specific date
-        #[oai(validator(pattern = "/\\d{4}-\\d{2}-\\d{2}/"))]
+        #[oai(validator(pattern = "\\d{4}-\\d{2}-\\d{2}"))]
         since: Query<Option<String>>,
         pool: Data<&MySqlPool>,
     ) -> PlayerBansResponse {

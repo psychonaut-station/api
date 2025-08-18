@@ -1,7 +1,9 @@
+mod lookup;
 mod player;
 mod recent_test_merges;
 mod roletime;
 
+pub use lookup::*;
 pub use player::*;
 pub use recent_test_merges::*;
 pub use roletime::*;
