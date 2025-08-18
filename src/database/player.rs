@@ -179,6 +179,44 @@ pub async fn get_player_characters(ckey: &str, pool: &MySqlPool) -> Result<Vec<C
     Ok(characters)
 }
 
+#[derive(Object)]
+pub struct Activity {
+    /// The date of the activity in YYYY-MM-DD format
+    pub date: String,
+    /// The number of rounds played on that date
+    pub rounds: i64,
+}
+
+pub async fn get_player_activity(ckey: &str, pool: &MySqlPool) -> Result<Vec<Activity>> {
+    let mut connection = pool.acquire().await?;
+
+    let query = sqlx::query(
+        "SELECT DATE(datetime) AS date, COUNT(DISTINCT round_id) AS rounds FROM connection_log WHERE ckey = ? AND datetime >= DATE_SUB(CURDATE(), INTERVAL 180 DAY) GROUP BY date;"
+    )
+    .bind(ckey.to_lowercase());
+
+    let mut activity = Vec::new();
+
+    {
+        let mut rows = connection.fetch(query);
+
+        while let Some(row) = rows.try_next().await? {
+            activity.push(Activity {
+                date: row.try_get::<Date, _>("date")?.into(),
+                rounds: row.try_get("rounds")?,
+            });
+        }
+    }
+
+    if activity.is_empty() && !player_exists(ckey, &mut connection).await? {
+        return Err(Error::PlayerNotFound);
+    }
+
+    Ok(activity)
+}
+
+// Utility
+
 async fn player_exists(ckey: &str, connection: &mut PoolConnection<MySql>) -> Result<bool> {
     let query = sqlx::query("SELECT 1 FROM player WHERE LOWER(ckey) = ?").bind(ckey.to_lowercase());
     Ok(connection.fetch_optional(query).await?.is_some())

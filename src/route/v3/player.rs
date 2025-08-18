@@ -8,8 +8,8 @@ use sqlx::MySqlPool;
 use tracing::error;
 
 use crate::database::{
-    Ban, Character, Error as DatabaseError, Player, get_player, get_player_bans,
-    get_player_characters,
+    Activity, Ban, Character, Error as DatabaseError, Player, get_player, get_player_activity,
+    get_player_bans, get_player_characters,
 };
 
 pub struct Endpoint;
@@ -33,6 +33,28 @@ impl Endpoint {
                 _ => {
                     error!("Error fetching player `{}`: {e:?}", *ckey);
                     PlayerResponse::InternalError(e.into())
+                }
+            },
+        }
+    }
+
+    /// /v3/player/{ckey}/activity
+    ///
+    /// Retrieves 180 day activity for the player
+    #[oai(path = "/player/:ckey/activity", method = "get")]
+    async fn player_activity(
+        &self,
+        /// The player's ckey
+        ckey: Path<String>,
+        pool: Data<&MySqlPool>,
+    ) -> PlayerActivityResponse {
+        match get_player_activity(&ckey, &pool).await {
+            Ok(activity) => PlayerActivityResponse::Success(Json(activity)),
+            Err(e) => match e {
+                DatabaseError::PlayerNotFound => PlayerActivityResponse::NotFound(e.into()),
+                _ => {
+                    error!("Error fetching activity for player `{}`: {e:?}", *ckey);
+                    PlayerActivityResponse::InternalError(e.into())
                 }
             },
         }
@@ -119,6 +141,19 @@ enum PlayerCharactersResponse {
     /// Returns when player characters successfully retrieved
     #[oai(status = 200)]
     Success(Json<Vec<Character>>),
+    /// Returns when player with the specified ckey does not exist
+    #[oai(status = 404)]
+    NotFound(PlainText<String>),
+    /// Returns when a database error occurred
+    #[oai(status = 500)]
+    InternalError(PlainText<String>),
+}
+
+#[derive(ApiResponse)]
+enum PlayerActivityResponse {
+    /// Returns when player activity successfully retrieved
+    #[oai(status = 200)]
+    Success(Json<Vec<Activity>>),
     /// Returns when player with the specified ckey does not exist
     #[oai(status = 404)]
     NotFound(PlainText<String>),
