@@ -7,7 +7,9 @@ use poem_openapi::{
 use sqlx::MySqlPool;
 use tracing::error;
 
-use crate::database::{Error as DatabaseError, PlayerRoletime, get_roletime_player};
+use crate::database::{
+    Error as DatabaseError, JobRoletime, PlayerRoletime, get_roletime_player, get_roletime_top,
+};
 
 pub struct Endpoint;
 
@@ -34,6 +36,25 @@ impl Endpoint {
             },
         }
     }
+
+    /// /v3/roletime/top/{job}
+    ///
+    /// Retrieves the top 15 players for a specific job based on minutes played.
+    #[oai(path = "/roletime/top/:job", method = "get")]
+    async fn roletime_top(
+        &self,
+        /// The job to filter by
+        job: Path<String>,
+        pool: Data<&MySqlPool>,
+    ) -> RoletimeTopResponse {
+        match get_roletime_top(&job, &pool).await {
+            Ok(roletime) => RoletimeTopResponse::Success(Json(roletime)),
+            Err(e) => {
+                error!("Error fetching top roletimes for job `{}`: {e:?}", *job);
+                RoletimeTopResponse::InternalError(e.into())
+            }
+        }
+    }
 }
 
 #[derive(ApiResponse)]
@@ -45,6 +66,15 @@ enum RoletimePlayerResponse {
     #[oai(status = 404)]
     NotFound(PlainText<String>),
     /// Returns when an internal error occurs
+    #[oai(status = 500)]
+    InternalError(PlainText<String>),
+}
+
+#[derive(ApiResponse)]
+enum RoletimeTopResponse {
+    /// Returns when top players successfully retrieved
+    #[oai(status = 200)]
+    Success(Json<Vec<JobRoletime>>),
     #[oai(status = 500)]
     InternalError(PlainText<String>),
 }
