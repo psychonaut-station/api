@@ -11,4 +11,4 @@ macro_rules! service {
     };
 }
 
-service!(server, player, recent_test_merges, roletime);
+service!(player, recent_test_merges, roletime, server);
