@@ -161,6 +161,19 @@ enum PlayerAchievementsResponse {
 }
 
 #[derive(ApiResponse)]
+enum PlayerActivityResponse {
+    /// Returns when player activity successfully retrieved
+    #[oai(status = 200)]
+    Success(Json<Vec<Activity>>),
+    /// Returns when player with the specified ckey does not exist
+    #[oai(status = 404)]
+    NotFound(PlainText<String>),
+    /// Returns when a database error occurred
+    #[oai(status = 500)]
+    InternalError(PlainText<String>),
+}
+
+#[derive(ApiResponse)]
 enum PlayerBansResponse {
     /// Returns when player bans successfully retrieved
     #[oai(status = 200)]
@@ -178,19 +191,6 @@ enum PlayerCharactersResponse {
     /// Returns when player characters successfully retrieved
     #[oai(status = 200)]
     Success(Json<Vec<Character>>),
-    /// Returns when player with the specified ckey does not exist
-    #[oai(status = 404)]
-    NotFound(PlainText<String>),
-    /// Returns when a database error occurred
-    #[oai(status = 500)]
-    InternalError(PlainText<String>),
-}
-
-#[derive(ApiResponse)]
-enum PlayerActivityResponse {
-    /// Returns when player activity successfully retrieved
-    #[oai(status = 200)]
-    Success(Json<Vec<Activity>>),
     /// Returns when player with the specified ckey does not exist
     #[oai(status = 404)]
     NotFound(PlainText<String>),
