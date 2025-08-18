@@ -1,11 +1,11 @@
 use const_format::formatcp as const_format;
 use futures::TryStreamExt;
 use poem_openapi::{Enum, Object};
-use sqlx::{Executor as _, MySql, MySqlPool, Row as _, pool::PoolConnection};
+use sqlx::{Executor as _, MySqlPool, Row as _};
 
 use crate::sqlxext::{Date, DateTime};
 
-use super::{Error, Result};
+use super::{Error, Result, player_exists};
 
 #[derive(Object)]
 pub struct Player {
@@ -303,11 +303,4 @@ pub async fn get_player_activity(ckey: &str, pool: &MySqlPool) -> Result<Vec<Act
     }
 
     Ok(activity)
-}
-
-// Utility
-
-async fn player_exists(ckey: &str, connection: &mut PoolConnection<MySql>) -> Result<bool> {
-    let query = sqlx::query("SELECT 1 FROM player WHERE LOWER(ckey) = ?").bind(ckey.to_lowercase());
-    Ok(connection.fetch_optional(query).await?.is_some())
 }

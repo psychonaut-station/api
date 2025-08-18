@@ -1,10 +1,13 @@
 mod player;
 mod recent_test_merges;
+mod roletime;
 
 pub use player::*;
 pub use recent_test_merges::*;
+pub use roletime::*;
 
 use poem_openapi::payload::PlainText;
+use sqlx::{Executor as _, MySql, pool::PoolConnection};
 use thiserror::Error;
 
 type Result<T> = std::result::Result<T, Error>;
@@ -26,4 +29,9 @@ impl From<Error> for PlainText<String> {
     fn from(val: Error) -> Self {
         PlainText(val.to_string())
     }
+}
+
+async fn player_exists(ckey: &str, connection: &mut PoolConnection<MySql>) -> Result<bool> {
+    let query = sqlx::query("SELECT 1 FROM player WHERE LOWER(ckey) = ?").bind(ckey.to_lowercase());
+    Ok(connection.fetch_optional(query).await?.is_some())
 }
