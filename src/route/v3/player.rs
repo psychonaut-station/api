@@ -8,8 +8,8 @@ use sqlx::MySqlPool;
 use tracing::error;
 
 use crate::database::{
-    Activity, Ban, Character, Error as DatabaseError, Player, get_player, get_player_activity,
-    get_player_bans, get_player_characters,
+    Achievement, Activity, Ban, Character, Error as DatabaseError, Player, get_player,
+    get_player_achievements, get_player_activity, get_player_bans, get_player_characters,
 };
 
 pub struct Endpoint;
@@ -33,6 +33,30 @@ impl Endpoint {
                 _ => {
                     error!("Error fetching player `{}`: {e:?}", *ckey);
                     PlayerResponse::InternalError(e.into())
+                }
+            },
+        }
+    }
+
+    /// /v3/player/{ckey}/achievements
+    ///
+    /// Retrieves unlocked achievements of the player
+    #[oai(path = "/player/:ckey/achievements", method = "get")]
+    async fn player_achievements(
+        &self,
+        /// The player's ckey
+        ckey: Path<String>,
+        /// Optional filter for specific achievement type
+        achievement_type: Query<Option<String>>,
+        pool: Data<&MySqlPool>,
+    ) -> PlayerAchievementsResponse {
+        match get_player_achievements(&ckey, &achievement_type, &pool).await {
+            Ok(achievements) => PlayerAchievementsResponse::Success(Json(achievements)),
+            Err(e) => match e {
+                DatabaseError::PlayerNotFound => PlayerAchievementsResponse::NotFound(e.into()),
+                _ => {
+                    error!("Error fetching achievements for player `{}`: {e:?}", *ckey);
+                    PlayerAchievementsResponse::InternalError(e.into())
                 }
             },
         }
@@ -115,6 +139,19 @@ enum PlayerResponse {
     /// Returns when wlayer data successfully retrieved
     #[oai(status = 200)]
     Success(Json<Player>),
+    /// Returns when player with the specified ckey does not exist
+    #[oai(status = 404)]
+    NotFound(PlainText<String>),
+    /// Returns when a database error occurred
+    #[oai(status = 500)]
+    InternalError(PlainText<String>),
+}
+
+#[derive(ApiResponse)]
+enum PlayerAchievementsResponse {
+    /// Returns when player achievements successfully retrieved
+    #[oai(status = 200)]
+    Success(Json<Vec<Achievement>>),
     /// Returns when player with the specified ckey does not exist
     #[oai(status = 404)]
     NotFound(PlainText<String>),

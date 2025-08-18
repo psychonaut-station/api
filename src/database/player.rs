@@ -1,6 +1,6 @@
 use const_format::formatcp as const_format;
 use futures::TryStreamExt;
-use poem_openapi::Object;
+use poem_openapi::{Enum, Object};
 use sqlx::{Executor as _, MySql, MySqlPool, Row as _, pool::PoolConnection};
 
 use crate::sqlxext::{Date, DateTime};
@@ -53,6 +53,96 @@ pub async fn get_player(ckey: &str, pool: &MySqlPool) -> Result<Player> {
     };
 
     Ok(player)
+}
+
+#[derive(Object)]
+pub struct Achievement {
+    /// The unique key of the achievement
+    pub achievement_key: String,
+    /// The version of the achievement
+    pub achievement_version: u16,
+    /// The type of the achievement
+    pub achievement_type: Option<AchievementType>,
+    /// The name of the achievement
+    pub achievement_name: Option<String>,
+    /// The description of the achievement
+    pub achievement_description: Option<String>,
+    /// If achievement type is Score, this is the score value such as the number of times Bubblegum has been killed;
+    /// If achievement type is Achievement, this is always 1
+    pub value: Option<i32>,
+    /// If achievement type is Score, this is the timestamp when the score was last updated;
+    /// If achievement type is Achievement, this is the timestamp when the achievement was unlocked
+    /// both in YYYY-MM-DD HH:MM:SS format
+    pub timestamp: String,
+}
+
+#[derive(Enum)]
+#[oai(rename_all = "lowercase")]
+pub enum AchievementType {
+    /// Represents a simple achievement that can be unlocked
+    Achievement,
+    /// Represents a score-based achievement
+    Score,
+    /// Base abstract type for achievements
+    Award,
+}
+
+impl From<String> for AchievementType {
+    fn from(value: String) -> Self {
+        match value.as_str() {
+            "achievement" => AchievementType::Achievement,
+            "score" => AchievementType::Score,
+            _ => AchievementType::Award,
+        }
+    }
+}
+
+pub async fn get_player_achievements(
+    ckey: &str,
+    achievement_type: &Option<String>,
+    pool: &MySqlPool,
+) -> Result<Vec<Achievement>> {
+    let mut connection = pool.acquire().await?;
+
+    let mut sql = "SELECT m.achievement_key, m.achievement_version, m.achievement_type, m.achievement_name, m.achievement_description, a.value, a.last_updated FROM achievements a JOIN achievement_metadata m ON a.achievement_key = m.achievement_key WHERE LOWER(a.ckey) = ?".to_string();
+
+    if achievement_type.is_some() {
+        sql.push_str(" AND m.achievement_type = ?");
+    }
+
+    sql.push_str(" ORDER BY a.last_updated DESC");
+
+    let mut query = sqlx::query(&sql).bind(ckey.to_lowercase());
+
+    if let Some(achievement_type) = achievement_type {
+        query = query.bind(achievement_type);
+    }
+
+    let mut achievements = Vec::new();
+
+    {
+        let mut rows = connection.fetch(query);
+
+        while let Some(row) = rows.try_next().await? {
+            achievements.push(Achievement {
+                achievement_key: row.try_get("achievement_key")?,
+                achievement_version: row.try_get("achievement_version")?,
+                achievement_type: row
+                    .try_get::<Option<String>, _>("achievement_type")?
+                    .map(Into::into),
+                achievement_name: row.try_get("achievement_name")?,
+                achievement_description: row.try_get("achievement_description")?,
+                value: row.try_get("value")?,
+                timestamp: row.try_get::<DateTime, _>("last_updated")?.into(),
+            });
+        }
+    }
+
+    if achievements.is_empty() && !player_exists(ckey, &mut connection).await? {
+        return Err(Error::PlayerNotFound);
+    }
+
+    Ok(achievements)
 }
 
 #[derive(Object)]
