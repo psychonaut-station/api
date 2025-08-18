@@ -7,7 +7,10 @@ use poem_openapi::{
 use sqlx::MySqlPool;
 use tracing::error;
 
-use crate::database::{Ban, Error as DatabaseError, Player, get_player, get_player_bans};
+use crate::database::{
+    Ban, Character, Error as DatabaseError, Player, get_player, get_player_bans,
+    get_player_characters,
+};
 
 pub struct Endpoint;
 
@@ -61,6 +64,28 @@ impl Endpoint {
             },
         }
     }
+
+    /// /v3/player/{ckey}/characters
+    ///
+    /// Retrieves characters associated with the player
+    #[oai(path = "/player/:ckey/characters", method = "get")]
+    async fn player_characters(
+        &self,
+        /// The player's ckey
+        ckey: Path<String>,
+        pool: Data<&MySqlPool>,
+    ) -> PlayerCharactersResponse {
+        match get_player_characters(&ckey, &pool).await {
+            Ok(characters) => PlayerCharactersResponse::Success(Json(characters)),
+            Err(e) => match e {
+                DatabaseError::PlayerNotFound => PlayerCharactersResponse::NotFound(e.into()),
+                _ => {
+                    error!("Error fetching characters for player `{}`: {e:?}", *ckey);
+                    PlayerCharactersResponse::InternalError(e.into())
+                }
+            },
+        }
+    }
 }
 
 #[derive(ApiResponse)]
@@ -81,6 +106,19 @@ enum PlayerBansResponse {
     /// Returns when player bans successfully retrieved
     #[oai(status = 200)]
     Success(Json<Vec<Ban>>),
+    /// Returns when player with the specified ckey does not exist
+    #[oai(status = 404)]
+    NotFound(PlainText<String>),
+    /// Returns when a database error occurred
+    #[oai(status = 500)]
+    InternalError(PlainText<String>),
+}
+
+#[derive(ApiResponse)]
+enum PlayerCharactersResponse {
+    /// Returns when player characters successfully retrieved
+    #[oai(status = 200)]
+    Success(Json<Vec<Character>>),
     /// Returns when player with the specified ckey does not exist
     #[oai(status = 404)]
     NotFound(PlainText<String>),

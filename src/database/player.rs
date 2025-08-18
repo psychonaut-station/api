@@ -1,3 +1,4 @@
+use const_format::formatcp as const_format;
 use futures::TryStreamExt;
 use poem_openapi::Object;
 use sqlx::{Executor as _, MySql, MySqlPool, Row as _, pool::PoolConnection};
@@ -137,6 +138,45 @@ pub async fn get_player_bans(
     }
 
     Ok(bans)
+}
+
+#[derive(Object)]
+pub struct Character {
+    /// The name of the character
+    pub name: String,
+    /// The number of times this character has been played
+    pub occurrences: i64,
+}
+
+pub async fn get_player_characters(ckey: &str, pool: &MySqlPool) -> Result<Vec<Character>> {
+    let mut connection = pool.acquire().await?;
+
+    const EXCLUDED_ROLES: &str = "('Operative', 'Wizard')";
+
+    let sql = const_format!(
+        "SELECT character_name, COUNT(*) AS times FROM manifest WHERE ckey = ? AND special NOT IN {EXCLUDED_ROLES} GROUP BY character_name ORDER BY times DESC"
+    );
+
+    let query = sqlx::query(sql).bind(ckey.to_lowercase());
+
+    let mut characters = Vec::new();
+
+    {
+        let mut rows = connection.fetch(query);
+
+        while let Some(row) = rows.try_next().await? {
+            characters.push(Character {
+                name: row.try_get("character_name")?,
+                occurrences: row.try_get("times")?,
+            });
+        }
+    }
+
+    if characters.is_empty() && !player_exists(ckey, &mut connection).await? {
+        return Err(Error::PlayerNotFound);
+    }
+
+    Ok(characters)
 }
 
 async fn player_exists(ckey: &str, connection: &mut PoolConnection<MySql>) -> Result<bool> {
