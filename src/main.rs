@@ -1,36 +1,37 @@
 mod byond;
 mod cache;
+mod config;
 mod database;
 mod route;
 mod sqlxext;
 
-use std::{
-    error::Error,
-    net::{IpAddr, Ipv4Addr, SocketAddr},
-    time::Duration,
-};
+use std::{net::SocketAddr, sync::Arc, time::Duration};
 
 use poem::{EndpointExt, Server, listener::TcpListener, middleware::AddData};
-use sqlx::{MySqlPool, mysql::MySqlPoolOptions};
-use urlencoding::encode;
+use sqlx::{
+    MySqlPool,
+    mysql::{MySqlConnectOptions, MySqlPoolOptions},
+};
 
-use crate::cache::Cache;
+use crate::{
+    cache::Cache,
+    config::{DatabaseConfig, InnerConfig as Config},
+};
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn Error>> {
-    let subscriber = tracing_subscriber::fmt().finish();
-    tracing::subscriber::set_global_default(subscriber)?;
+async fn main() -> color_eyre::Result<()> {
+    color_eyre::install()?;
+    tracing::subscriber::set_global_default(tracing_subscriber::fmt().finish())?;
 
-    let db_url = format!(
-        "mysql://{db_user}:{}@{db_host}:{db_port}/{db_name}",
-        encode(db_pass)
-    );
+    let config = Arc::new(Config::read_from_file("config.toml")?);
+
+    let socket = SocketAddr::new(config.address, config.port);
 
     let app = route::route()
-        .with(AddData::new(pool(&db_url)))
-        .with(AddData::new(Cache::default()));
+        .with(AddData::new(pool(&config.database)))
+        .with(AddData::new(Cache::default()))
+        .with(AddData::new(config));
 
-    let socket = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0)), 3000);
     let server = Server::new(TcpListener::bind(socket));
 
     server.run(app).await?;
@@ -38,7 +39,14 @@ async fn main() -> Result<(), Box<dyn Error>> {
     Ok(())
 }
 
-fn pool(url: &str) -> MySqlPool {
+fn pool(config: &DatabaseConfig) -> MySqlPool {
+    let connect_options = MySqlConnectOptions::new()
+        .username(&config.user)
+        .password(&config.password)
+        .host(&config.host)
+        .port(config.port)
+        .database(&config.name);
+
     let options = MySqlPoolOptions::new()
         .min_connections(5)
         .max_connections(10)
@@ -46,5 +54,5 @@ fn pool(url: &str) -> MySqlPool {
         .max_lifetime(Duration::from_secs(3))
         .idle_timeout(Duration::from_secs(5));
 
-    options.connect_lazy(url).unwrap()
+    options.connect_lazy_with(connect_options)
 }

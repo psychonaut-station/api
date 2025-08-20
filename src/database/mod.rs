@@ -10,11 +10,10 @@ pub use roletime::*;
 
 use poem_openapi::payload::PlainText;
 use sqlx::{Executor as _, MySql, pool::PoolConnection};
-use thiserror::Error;
 
 type Result<T> = std::result::Result<T, Error>;
 
-#[derive(Error, Debug)]
+#[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("internal database error")]
     Sqlx(#[from] sqlx::Error),
