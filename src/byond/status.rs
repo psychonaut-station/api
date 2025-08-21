@@ -1,19 +1,21 @@
-use std::{error::Error, str::FromStr};
+use std::{net::SocketAddr, str::FromStr};
 
-use serde::Serialize;
-use serde_repr::Serialize_repr;
+use poem_openapi::Enum;
 
-use super::topic::{ByondResponse, topic};
+use super::{
+    Error, Result,
+    topic::{Response, topic},
+};
 
-pub async fn status(address: &str) -> Result<ServerStatus, Box<dyn Error>> {
+pub async fn status(address: SocketAddr) -> Result<Status> {
     match topic(address, "?status").await? {
-        ByondResponse::String(response) => {
-            let mut status = ServerStatus::default();
+        Response::String(response) => {
+            let mut status = Status::default();
 
             for params in response.split('&') {
                 let mut split = params.splitn(2, '=');
 
-                let key = split.next().ok_or("invalid response")?;
+                let key = split.next().ok_or(Error::InvalidResponse)?;
                 let value = split.next().unwrap_or("");
 
                 match key {
@@ -38,13 +40,14 @@ pub async fn status(address: &str) -> Result<ServerStatus, Box<dyn Error>> {
                     "time_dilation_avg_slow" => status.time_dilation_avg_slow = value.parse()?,
                     "time_dilation_avg_fast" => status.time_dilation_avg_fast = value.parse()?,
                     "soft_popcap" => status.soft_popcap = value.parse()?,
-                    "hard_popcap" => status.extreme_popcap = value.parse()?,
+                    "hard_popcap" => status.hard_popcap = value.parse()?,
                     "extreme_popcap" => status.extreme_popcap = value.parse()?,
                     "popcap" => status.popcap = value == "1",
                     "bunkered" => status.bunkered = value == "1",
                     "interviews" => status.interviews = value == "1",
                     "shuttle_mode" => status.shuttle_mode = value.parse()?,
                     "shuttle_timer" => status.shuttle_timer = value.parse()?,
+                    "public_address" => status.public_address = value.to_string(),
                     _ => {
                         #[cfg(debug_assertions)]
                         tracing::warn!(
@@ -56,38 +59,38 @@ pub async fn status(address: &str) -> Result<ServerStatus, Box<dyn Error>> {
 
             Ok(status)
         }
-        res => Err(format!("Unexpected response: {res:?}").into()),
+        res => Err(Error::UnexpectedResponse(res)),
     }
 }
 
-#[derive(Debug, Default, Serialize_repr)]
-#[repr(u8)]
+#[derive(Default, Enum, Clone)]
+#[oai(rename_all = "lowercase")]
 pub enum GameState {
     #[default]
-    Startup = 0,
-    Pregame = 1,
-    SettingUp = 2,
-    Playing = 3,
-    Finished = 4,
+    Startup,
+    Pregame,
+    SettingUp,
+    Playing,
+    Finished,
 }
 
 impl FromStr for GameState {
-    type Err = Box<dyn Error>;
+    type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         match s {
             "0" => Ok(GameState::Startup),
             "1" => Ok(GameState::Pregame),
             "2" => Ok(GameState::SettingUp),
             "3" => Ok(GameState::Playing),
             "4" => Ok(GameState::Finished),
-            _ => Err(format!("Unknown game state: {s}").into()),
+            _ => Err(Error::GameStateConversion(s.to_string())),
         }
     }
 }
 
-#[derive(Debug, Default, Serialize)]
-#[serde(rename_all = "snake_case")]
+#[derive(Default, Enum, Clone)]
+#[oai(rename_all = "lowercase")]
 pub enum SecurityLevel {
     #[default]
     Green,
@@ -97,21 +100,21 @@ pub enum SecurityLevel {
 }
 
 impl FromStr for SecurityLevel {
-    type Err = Box<dyn Error>;
+    type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         match s {
             "green" => Ok(SecurityLevel::Green),
             "blue" => Ok(SecurityLevel::Blue),
             "red" => Ok(SecurityLevel::Red),
             "delta" => Ok(SecurityLevel::Delta),
-            _ => Err(format!("Unknown security level: {s}").into()),
+            _ => Err(Error::SecurityLevelConversion(s.to_string())),
         }
     }
 }
 
-#[derive(Debug, Default, Serialize)]
-#[serde(rename_all = "snake_case")]
+#[derive(Default, Enum)]
+#[oai(rename_all = "lowercase")]
 pub enum ShuttleMode {
     #[default]
     Idle,
@@ -122,16 +125,16 @@ pub enum ShuttleMode {
     Stranded,
     Disabled,
     Escape,
-    #[serde(rename = "endgame: game over")]
+    #[oai(rename = "endgame: game over")]
     Endgame,
     Recharging,
     Landing,
 }
 
 impl FromStr for ShuttleMode {
-    type Err = Box<dyn Error>;
+    type Err = Error;
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         match s {
             "idle" => Ok(ShuttleMode::Idle),
             "igniting" => Ok(ShuttleMode::Igniting),
@@ -144,13 +147,13 @@ impl FromStr for ShuttleMode {
             "endgame%3a+game+over" => Ok(ShuttleMode::Endgame),
             "recharging" => Ok(ShuttleMode::Recharging),
             "landing" => Ok(ShuttleMode::Landing),
-            _ => Err(format!("Unknown shuttle mode: {s}").into()),
+            _ => Err(Error::ShuttleModeConversion(s.to_string())),
         }
     }
 }
 
-#[derive(Debug, Default, Serialize)]
-pub struct ServerStatus {
+#[derive(Default)]
+pub struct Status {
     pub version: String,
     pub respawn: bool,
     pub enter: bool,
@@ -179,4 +182,5 @@ pub struct ServerStatus {
     pub interviews: bool,
     pub shuttle_mode: ShuttleMode,
     pub shuttle_timer: u32,
+    pub public_address: String,
 }

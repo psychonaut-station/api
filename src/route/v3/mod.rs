@@ -2,7 +2,7 @@ mod lookup;
 mod player;
 mod recent_test_merges;
 mod roletime;
-mod server;
+pub mod server;
 
 macro_rules! service {
     ($($endpoint:ident),*) => {

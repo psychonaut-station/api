@@ -1,4 +1,8 @@
-use std::{fs::read_to_string, net::IpAddr, sync::Arc};
+use std::{
+    fs::read_to_string,
+    net::{IpAddr, SocketAddr},
+    sync::Arc,
+};
 
 use serde::Deserialize;
 
@@ -11,6 +15,7 @@ pub struct InnerConfig {
     pub address: IpAddr,
     pub port: u16,
     pub database: DatabaseConfig,
+    pub servers: Vec<ServerConfig>,
 }
 
 #[derive(Deserialize)]
@@ -21,6 +26,15 @@ pub struct DatabaseConfig {
     pub host: String,
     pub port: u16,
     pub name: String,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct ServerConfig {
+    pub name: String,
+    pub address: SocketAddr,
+    pub connection_address: String,
+    pub error_message: String,
 }
 
 impl InnerConfig {

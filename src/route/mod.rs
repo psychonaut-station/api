@@ -1,4 +1,4 @@
-mod v3;
+pub mod v3;
 
 use poem::{Route, endpoint::make_sync, web::Html};
 
