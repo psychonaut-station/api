@@ -1,5 +1,5 @@
 use chrono::{NaiveDate, NaiveDateTime};
-use const_format::concatcp;
+use const_format::{concatcp, formatcp as const_format};
 use rocket::futures::StreamExt as _;
 use serde::Serialize;
 use sqlx::{pool::PoolConnection, Executor as _, FromRow, MySql, MySqlPool, Row as _};
@@ -500,12 +500,15 @@ pub async fn lookup_player(
     let mut connection = pool.acquire().await?;
 
     let mut sql =
-        "SELECT computerid, INET_NTOA(ip) AS ip, ckey FROM connection_log WHERE ".to_string();
+        "SELECT computerid, INET_NTOA(ip) AS readable_ip, ckey FROM connection_log WHERE "
+            .to_string();
+
+    const EXCLUDED_IPS: &str = "('104.28.212.150')";
 
     if ckey.is_some() {
         sql.push_str(
-            "(computerid IN (SELECT DISTINCT computerid FROM connection_log WHERE ckey = ?) OR
-             ip IN (SELECT DISTINCT ip FROM connection_log WHERE ckey = ?))",
+            const_format!("(computerid IN (SELECT DISTINCT computerid FROM connection_log WHERE ckey = ?) OR
+             ip IN (SELECT DISTINCT ip FROM connection_log WHERE ckey = ?)) AND INET_NTOA(ip) NOT IN {EXCLUDED_IPS}"),
         );
     } else if ip.is_some() {
         sql.push_str(
@@ -514,8 +517,8 @@ pub async fn lookup_player(
         );
     } else if cid.is_some() {
         sql.push_str(
-            "(ip IN (SELECT DISTINCT ip FROM connection_log WHERE computerid = ?) OR
-             ckey IN (SELECT DISTINCT ckey FROM connection_log WHERE computerid = ?))",
+            const_format!("(ip IN (SELECT DISTINCT ip FROM connection_log WHERE computerid = ?) OR
+             ckey IN (SELECT DISTINCT ckey FROM connection_log WHERE computerid = ?)) AND INET_NTOA(ip) NOT IN {EXCLUDED_IPS}"),
         );
     } else {
         unreachable!();
@@ -541,7 +544,7 @@ pub async fn lookup_player(
         let row = row?;
 
         let cid: String = row.try_get("computerid")?;
-        let ip: String = row.try_get("ip")?;
+        let ip: String = row.try_get("readable_ip")?;
         let ckey: String = row.try_get("ckey")?;
 
         result.push((cid, ip, ckey));
