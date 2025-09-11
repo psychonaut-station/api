@@ -7,7 +7,7 @@ mod discord;
 mod events;
 mod patreon;
 mod player;
-mod rounds;
+mod round;
 mod server;
 mod verify;
 
@@ -28,8 +28,8 @@ pub fn mount(rocket: Rocket<Build>) -> Rocket<Build> {
             player::discord,
             player::achievements,
             player::lookup,
-            rounds::index,
-            rounds::rounds,
+            round::index,
+            round::rounds,
             server::index,
             verify::index,
             verify::unverify,
