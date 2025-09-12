@@ -15,7 +15,7 @@ pub async fn index(
     round_id: i32,
     database: &State<Database>,
     config: &State<Config>,
-    _api_key: ApiKey
+    _api_key: ApiKey,
 ) -> Result<Json<RoundData>, HttpStatus> {
     match get_round(round_id, config, &database.pool).await {
         Ok(round) => Ok(Json::Ok(round)),

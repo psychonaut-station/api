@@ -3,9 +3,9 @@ use rocket::futures::StreamExt as _;
 use serde::Serialize;
 
 use serde_json::Value;
-use sqlx::{ Executor as _, MySqlPool, Row as _};
+use sqlx::{Executor as _, MySqlPool, Row as _};
 
-use crate::{database::*, config::Config};
+use crate::{config::Config, database::*};
 
 use super::error::Error;
 
@@ -35,7 +35,7 @@ pub struct RoundData {
 pub async fn get_round(
     round_id: i32,
     config: &Config,
-    pool: &MySqlPool
+    pool: &MySqlPool,
 ) -> Result<RoundData, Error> {
     let current_round_id = get_round_id(config).await?;
 
@@ -47,19 +47,34 @@ pub async fn get_round(
 
     let mut connection = pool.acquire().await?;
 
-    let nukedisk_feedback = get_feedback("associative", "roundend_nukedisk", round_id, &mut connection).await?;
-    let dynamic_tier_feedback = get_feedback("associative", "dynamic_tier", round_id, &mut connection).await?;
-    let antagonists_feedback = get_feedback("associative", "antagonists", round_id, &mut connection).await?;
+    let nukedisk_feedback = get_feedback(
+        "associative",
+        "roundend_nukedisk",
+        round_id,
+        &mut connection,
+    )
+    .await?;
+    let dynamic_tier_feedback =
+        get_feedback("associative", "dynamic_tier", round_id, &mut connection).await?;
+    let antagonists_feedback =
+        get_feedback("associative", "antagonists", round_id, &mut connection).await?;
 
-    let nukedisk: Option<Value> = nukedisk_feedback.and_then(|fb| fb.json.get("data").cloned()).and_then(|data| data.get("1").cloned());
-    let dynamic_tier: Option<i32> = dynamic_tier_feedback.and_then(|fb| fb.json.get("data").cloned()).and_then(|data| data.get("1").cloned()).and_then(|data| data.get("tier").cloned()).and_then(|v| v.as_str()?.parse::<i32>().ok());  
-    let antagonists_objects: Option<Value> = antagonists_feedback.and_then(|fb| fb.json.get("data").cloned());  
+    let nukedisk: Option<Value> = nukedisk_feedback
+        .and_then(|fb| fb.json.get("data").cloned())
+        .and_then(|data| data.get("1").cloned());
+    let dynamic_tier: Option<i32> = dynamic_tier_feedback
+        .and_then(|fb| fb.json.get("data").cloned())
+        .and_then(|data| data.get("1").cloned())
+        .and_then(|data| data.get("tier").cloned())
+        .and_then(|v| v.as_str()?.parse::<i32>().ok());
+    let antagonists_objects: Option<Value> =
+        antagonists_feedback.and_then(|fb| fb.json.get("data").cloned());
     let antagonists: Vec<Value> = match antagonists_objects {
         Some(Value::Object(ref map)) => {
             let mut keys: Vec<_> = map.keys().collect();
             keys.sort_by_key(|k| k.parse::<usize>().unwrap());
             keys.iter().map(|k| map[k.as_str()].clone()).collect()
-        },
+        }
         _ => Vec::new(),
     };
 
@@ -71,8 +86,9 @@ pub async fn get_round(
     let Ok(row) = connection.fetch_one(query).await else {
         return Err(Error::RoundNotFound);
     };
-    
-    let population = get_population(round_id, Some(row.try_get("initialize_datetime")?), pool).await?;
+
+    let population =
+        get_population(round_id, Some(row.try_get("initialize_datetime")?), pool).await?;
 
     let round = RoundData {
         round_id: row.try_get("id")?,
@@ -97,38 +113,42 @@ pub async fn get_round(
     Ok(round)
 }
 
-pub async fn get_population(round_id: i32, initialize_date: Option<NaiveDateTime>, pool: &MySqlPool) -> Result<Vec<(String, i64)>, Error> {
+pub async fn get_population(
+    round_id: i32,
+    initialize_date: Option<NaiveDateTime>,
+    pool: &MySqlPool,
+) -> Result<Vec<(String, i64)>, Error> {
     let mut connection = pool.acquire().await?;
 
     let query = sqlx::query(
-        "SELECT time, playercount FROM legacy_population WHERE round_id = ? ORDER BY time ASC;"
+        "SELECT time, playercount FROM legacy_population WHERE round_id = ? ORDER BY time ASC;",
     )
     .bind(round_id);
 
     let mut population = Vec::new();
 
-{
-    let mut rows = connection.fetch(query);
+    {
+        let mut rows = connection.fetch(query);
 
-    while let Some(row) = rows.next().await {
-        let row = row?;
+        while let Some(row) = rows.next().await {
+            let row = row?;
 
-        let datetime: NaiveDateTime = row.try_get("time")?;
+            let datetime: NaiveDateTime = row.try_get("time")?;
 
-        let time_str = if let Some(start) = initialize_date {
-            let duration = datetime - start;
+            let time_str = if let Some(start) = initialize_date {
+                let duration = datetime - start;
 
-            let hours = duration.num_hours();
-            let minutes = duration.num_minutes() % 60;
-            let seconds = duration.num_seconds() % 60;
-            format!("{hours:02}:{minutes:02}:{seconds:02}")
-        } else {
-            datetime.format("%H:%M:%S").to_string()
-        };
+                let hours = duration.num_hours();
+                let minutes = duration.num_minutes() % 60;
+                let seconds = duration.num_seconds() % 60;
+                format!("{hours:02}:{minutes:02}:{seconds:02}")
+            } else {
+                datetime.format("%H:%M:%S").to_string()
+            };
 
-        population.push((time_str, row.try_get("playercount")?));
+            population.push((time_str, row.try_get("playercount")?));
+        }
     }
-}
 
     connection.close().await?;
 
@@ -140,7 +160,7 @@ pub async fn get_rounds(
     page: Option<i32>,
     autocomplete_round_id: Option<i32>,
     config: &Config,
-    pool: &MySqlPool
+    pool: &MySqlPool,
 ) -> Result<(Vec<RoundData>, i64), Error> {
     let round_id = get_round_id(config).await?;
 
@@ -174,7 +194,7 @@ pub async fn get_rounds(
 
     if round_id.is_some() {
         sql.push_str(" AND id < ?");
-    } 
+    }
     if autocomplete_round_id.is_some() {
         sql.push_str(" AND id LIKE CONCAT(?, '%')");
     }
