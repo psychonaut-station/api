@@ -23,6 +23,30 @@ pub struct Feedback {
 pub async fn get_feedback(
     key_type: &str,
     key_name: &str,
+    round_id: i32,
+    connection: &mut PoolConnection<MySql>,
+) -> Result<Option<Feedback>, Error> {
+    let query = sqlx::query(
+        "SELECT datetime, round_id, key_name, key_type, json FROM feedback WHERE key_name = ? AND key_type = ? AND round_id = ?"
+    ).bind(key_name).bind(key_type).bind(round_id);
+
+    let Ok(row) = connection.fetch_one(query).await else {
+        return Ok(None);
+    };
+    let feedback = Feedback {
+        datetime: row.try_get("datetime")?,
+        round_id: row.try_get("round_id")?,
+        key_name: row.try_get("key_name")?,
+        key_type: row.try_get("key_type")?,
+        json: row.try_get("json")?,
+    };
+
+    Ok(Some(feedback))
+}
+
+pub async fn get_feedbacks(
+    key_type: &str,
+    key_name: &str,
     limit: i32,
     exclude_round: Option<i32>,
     connection: &mut PoolConnection<MySql>,
@@ -37,8 +61,8 @@ pub async fn get_feedback(
 
     let mut query = sqlx::query(&sql).bind(key_name).bind(key_type);
 
-    if let Some(round_id) = exclude_round {
-        query = query.bind(round_id).bind(round_id - limit);
+    if let Some(exclude_round) = exclude_round {
+        query = query.bind(exclude_round).bind(exclude_round - limit);
     }
 
     query = query.bind(limit);
@@ -489,7 +513,7 @@ pub async fn get_players_overview(
     exclude_round: Option<i32>,
     connection: &mut PoolConnection<MySql>,
 ) -> Result<HashMap<u32, u32>, Error> {
-    let feedback = get_feedback(
+    let feedback = get_feedbacks(
         "nested tally",
         "round_end_stats",
         limit,
@@ -518,7 +542,7 @@ pub async fn get_threat_overview(
     exclude_round: Option<i32>,
     connection: &mut PoolConnection<MySql>,
 ) -> Result<HashMap<u32, (i32, i32)>, Error> {
-    let feedback = get_feedback(
+    let feedback = get_feedbacks(
         "associative",
         "dynamic_tier",
         limit,
