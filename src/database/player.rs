@@ -503,7 +503,7 @@ pub async fn lookup_player(
         "SELECT computerid, INET_NTOA(ip) AS readable_ip, ckey FROM connection_log WHERE "
             .to_string();
 
-    const EXCLUDED_IPS: &str = "('104.28.212.150')";
+    const EXCLUDED_IPS: &str = "('104.28.212.150', '104.28.244.150')";
 
     if ckey.is_some() {
         sql.push_str(
