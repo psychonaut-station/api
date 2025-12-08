@@ -1,5 +1,5 @@
 use chrono::{NaiveDate, NaiveDateTime};
-use const_format::{concatcp, formatcp as const_format};
+use const_format::concatcp;
 use rocket::futures::StreamExt as _;
 use serde::Serialize;
 use sqlx::{pool::PoolConnection, Executor as _, FromRow, MySql, MySqlPool, Row as _};
@@ -503,13 +503,16 @@ pub async fn lookup_player(
         "SELECT computerid, INET_NTOA(ip) AS readable_ip, ckey FROM connection_log WHERE "
             .to_string();
 
-    const EXCLUDED_IPS: &str = "('104.28.212.150', '104.28.244.150')";
+    // filters 104.28.0.0/16 (cloudflare) subnet
+    const EXCLUSION_SUBNET: &str =
+        " AND INET_NTOA(ip & INET_ATON('255.255.0.0')) NOT IN ('104.28.0.0')";
 
     if ckey.is_some() {
         sql.push_str(
-            const_format!("(computerid IN (SELECT DISTINCT computerid FROM connection_log WHERE ckey = ?) OR
-             ip IN (SELECT DISTINCT ip FROM connection_log WHERE ckey = ?)) AND INET_NTOA(ip) NOT IN {EXCLUDED_IPS}"),
+            "(computerid IN (SELECT DISTINCT computerid FROM connection_log WHERE ckey = ?) OR
+             ip IN (SELECT DISTINCT ip FROM connection_log WHERE ckey = ?))",
         );
+        sql.push_str(EXCLUSION_SUBNET);
     } else if ip.is_some() {
         sql.push_str(
             "(computerid IN (SELECT DISTINCT computerid FROM connection_log WHERE ip = INET_ATON(?)) OR
@@ -517,9 +520,10 @@ pub async fn lookup_player(
         );
     } else if cid.is_some() {
         sql.push_str(
-            const_format!("(ip IN (SELECT DISTINCT ip FROM connection_log WHERE computerid = ?) OR
-             ckey IN (SELECT DISTINCT ckey FROM connection_log WHERE computerid = ?)) AND INET_NTOA(ip) NOT IN {EXCLUDED_IPS}"),
+            "(ip IN (SELECT DISTINCT ip FROM connection_log WHERE computerid = ?) OR
+             ckey IN (SELECT DISTINCT ckey FROM connection_log WHERE computerid = ?))",
         );
+        sql.push_str(EXCLUSION_SUBNET);
     } else {
         unreachable!();
     }
