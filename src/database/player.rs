@@ -504,7 +504,7 @@ pub async fn lookup_player(
             .to_string();
 
     // filters 104.28.0.0/16 (cloudflare) subnet
-    const EXCLUSION_SUBNET: &str = " AND INET_NTOA(ip) NOT LIKE '104.28.%'";
+    const EXCLUSION_SUBNET: &str = " AND INET_NTOA(ip & INET_ATON('255.255.0.0')) NOT IN ('104.28.0.0')";
 
     if ckey.is_some() {
         sql.push_str(
