@@ -1,5 +1,5 @@
 use chrono::{NaiveDate, NaiveDateTime};
-use const_format::{concatcp, formatcp as const_format};
+use const_format::concatcp;
 use rocket::futures::StreamExt as _;
 use serde::Serialize;
 use sqlx::{pool::PoolConnection, Executor as _, FromRow, MySql, MySqlPool, Row as _};
