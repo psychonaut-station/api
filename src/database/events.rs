@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use chrono::NaiveDateTime;
 use rocket::futures::StreamExt as _;
@@ -572,6 +572,47 @@ pub async fn get_threat_overview(
     Ok(threats)
 }
 
+pub async fn get_antagonist_overview(
+    limit: i32,
+    exclude_round: Option<i32>,
+    connection: &mut PoolConnection<MySql>,
+) -> Result<HashMap<u32, (i32, i32)>, Error> {
+    let feedbacks = get_feedbacks(
+        "associative",
+        "antagonists",
+        limit,
+        exclude_round,
+        connection,
+    )
+    .await?;
+
+    let mut antagonists = HashMap::new();
+
+    for feedback in &feedbacks {
+        let round_id = match feedback.round_id {
+            Some(id) => id,
+            None => continue,
+        };
+
+        if let Some(data_map) = feedback.json.get("data").and_then(|d| d.as_object()) {
+            let mut total_count = 0;
+            let mut unique_types = HashSet::new();
+
+            for (_key, val) in data_map {
+                total_count += 1;
+
+                if let Some(antag_type) = val.get("antagonist_type").and_then(|t| t.as_str()) {
+                    unique_types.insert(antag_type.to_string());
+                }
+            }
+
+            antagonists.insert(round_id, (total_count, unique_types.len() as i32));
+        }
+    }
+
+    Ok(antagonists)
+}
+
 #[derive(Debug, Serialize)]
 pub struct Overview {
     pub round_id: u32,
@@ -584,6 +625,8 @@ pub struct Overview {
     pub players: u32,
     pub dynamic_tier: i32,
     pub readied_players: i32,
+    pub antagonist_count: i32,
+    pub unique_antagonist_count: i32,
 }
 
 pub async fn get_overview(
@@ -601,6 +644,7 @@ pub async fn get_overview(
     let crimes = get_crimes_overview(limit, exclude_round, &mut connection).await?;
     let players = get_players_overview(limit, exclude_round, &mut connection).await?;
     let threat_levels = get_threat_overview(limit, exclude_round, &mut connection).await?;
+    let antagonist = get_antagonist_overview(limit, exclude_round, &mut connection).await?;
 
     connection.close().await?;
 
@@ -615,6 +659,8 @@ pub async fn get_overview(
         let crimes = *crimes.get(round_id).unwrap_or(&0);
         let players = *players.get(round_id).unwrap_or(&0);
         let (dynamic_tier, readied_players) = *threat_levels.get(round_id).unwrap_or(&(0, 0));
+        let (antagonist_count, unique_antagonist_count) =
+            *antagonist.get(round_id).unwrap_or(&(0, 0));
 
         let overview_ = Overview {
             round_id: *round_id,
@@ -626,6 +672,8 @@ pub async fn get_overview(
             players,
             dynamic_tier,
             readied_players,
+            antagonist_count,
+            unique_antagonist_count,
         };
 
         overview.push(overview_);

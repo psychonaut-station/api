@@ -22,6 +22,7 @@ pub struct RoundData {
     pub nukedisk: Option<Value>,
     pub antagonists: Vec<Value>,
     pub dynamic_tier: Option<i32>,
+    pub storyteller: Option<String>,
     #[serde(with = "crate::serde::datetime")]
     pub initialize_datetime: NaiveDateTime,
     #[serde(with = "crate::serde::opt_datetime")]
@@ -58,6 +59,8 @@ pub async fn get_round(
         get_feedback("associative", "dynamic_tier", round_id, &mut connection).await?;
     let antagonists_feedback =
         get_feedback("associative", "antagonists", round_id, &mut connection).await?;
+    let storyteller_feedback =
+        get_feedback("associative", "storyteller", round_id, &mut connection).await?;
 
     let nukedisk: Option<Value> = nukedisk_feedback
         .and_then(|fb| fb.json.get("data").cloned())
@@ -67,6 +70,11 @@ pub async fn get_round(
         .and_then(|data| data.get("1").cloned())
         .and_then(|data| data.get("tier").cloned())
         .and_then(|v| v.as_str()?.parse::<i32>().ok());
+    let storyteller: Option<String> = storyteller_feedback
+        .and_then(|fb| fb.json.get("data").cloned())
+        .and_then(|data| data.get("1").cloned())
+        .and_then(|data| data.get("name").cloned())
+        .and_then(|value| value.as_str().map(String::from));
     let antagonists_objects: Option<Value> =
         antagonists_feedback.and_then(|fb| fb.json.get("data").cloned());
     let antagonists: Vec<Value> = match antagonists_objects {
@@ -106,6 +114,7 @@ pub async fn get_round(
         nukedisk,
         antagonists,
         dynamic_tier,
+        storyteller,
     };
 
     connection.close().await?;
@@ -236,6 +245,7 @@ pub async fn get_rounds(
                 antagonists: Vec::new(),
                 nukedisk: None,
                 dynamic_tier: None,
+                storyteller: None,
             };
 
             rounds.push(round);
