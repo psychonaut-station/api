@@ -1,3 +1,4 @@
+mod ban;
 pub mod error;
 mod events;
 mod player;
@@ -6,6 +7,7 @@ mod state;
 mod test_merges;
 mod verify;
 
+pub use ban::*;
 pub use events::*;
 pub use player::*;
 pub use round::*;

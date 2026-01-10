@@ -6,7 +6,7 @@ use sqlx::{pool::PoolConnection, Executor as _, FromRow, MySql, MySqlPool, Row a
 
 use crate::config::Config;
 
-use super::error::Error;
+use super::{error::Error, Ban};
 
 #[derive(Debug, Serialize)]
 pub struct Player {
@@ -182,23 +182,6 @@ pub async fn get_ckeys(
     Ok(ckeys)
 }
 
-#[derive(Debug, Serialize)]
-pub struct Ban {
-    #[serde(with = "crate::serde::datetime")]
-    pub bantime: NaiveDateTime,
-    pub round_id: Option<u32>,
-    pub roles: Option<String>,
-    #[serde(with = "crate::serde::opt_datetime")]
-    pub expiration_time: Option<NaiveDateTime>,
-    pub reason: String,
-    pub ckey: Option<String>,
-    pub a_ckey: String,
-    pub edits: Option<String>,
-    #[serde(with = "crate::serde::opt_datetime")]
-    pub unbanned_datetime: Option<NaiveDateTime>,
-    pub unbanned_ckey: Option<String>,
-}
-
 pub async fn get_ban(
     ckey: &str,
     permanent: bool,
@@ -229,24 +212,8 @@ pub async fn get_ban(
 
     {
         let mut rows = connection.fetch(query);
-
         while let Some(row) = rows.next().await {
-            let ban = row?;
-
-            let ban = Ban {
-                bantime: ban.try_get("bantime")?,
-                round_id: ban.try_get("round_id")?,
-                roles: ban.try_get("roles")?,
-                expiration_time: ban.try_get("expiration_time")?,
-                reason: ban.try_get("reason")?,
-                ckey: ban.try_get("ckey")?,
-                a_ckey: ban.try_get("a_ckey")?,
-                edits: ban.try_get("edits")?,
-                unbanned_datetime: ban.try_get("unbanned_datetime")?,
-                unbanned_ckey: ban.try_get("unbanned_ckey")?,
-            };
-
-            bans.push(ban);
+            bans.push(row?.try_into()?);
         }
     }
 

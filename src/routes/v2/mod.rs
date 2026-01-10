@@ -1,6 +1,7 @@
 use rocket::{routes, Build, Rocket};
 
 mod autocomplete;
+mod ban;
 mod byond;
 mod common;
 mod discord;
@@ -45,6 +46,7 @@ pub fn mount(rocket: Rocket<Build>) -> Rocket<Build> {
             events::citations,
             events::crimes,
             events::deaths,
+            ban::index,
         ],
     )
 }
