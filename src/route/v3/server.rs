@@ -33,7 +33,7 @@ impl Endpoint {
                     ByondError::Elapsed(_) => None,
                     // ByondError::Io(e) if e.kind() == io::ErrorKind::TimedOut => None,
                     _ => {
-                        error!("Error fetching status for server `{}`: {e:?}", server.name);
+                        error!(server = server.name, err = ?e, "error fetching server status");
                         None
                     }
                 },

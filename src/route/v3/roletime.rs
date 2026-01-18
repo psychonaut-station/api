@@ -30,7 +30,7 @@ impl Endpoint {
             Err(e) => match e {
                 DatabaseError::PlayerNotFound => RoletimePlayerResponse::NotFound(e.into()),
                 _ => {
-                    error!("Error fetching roletimes for player `{}`: {e:?}", *ckey);
+                    error!(ckey = *ckey, err = ?e, "error fetching player roletime");
                     RoletimePlayerResponse::InternalError(e.into())
                 }
             },
@@ -50,7 +50,7 @@ impl Endpoint {
         match get_roletime_top(&job, &pool).await {
             Ok(roletime) => RoletimeTopResponse::Success(Json(roletime)),
             Err(e) => {
-                error!("Error fetching top roletimes for job `{}`: {e:?}", *job);
+                error!(job = *job, err = ?e, "error fetching job roletime");
                 RoletimeTopResponse::InternalError(e.into())
             }
         }

@@ -31,7 +31,7 @@ impl Endpoint {
             Err(e) => match e {
                 DatabaseError::PlayerNotFound => PlayerResponse::NotFound(e.into()),
                 _ => {
-                    error!("Error fetching player `{}`: {e:?}", *ckey);
+                    error!(ckey = *ckey, err = ?e, "error fetching player");
                     PlayerResponse::InternalError(e.into())
                 }
             },
@@ -55,7 +55,7 @@ impl Endpoint {
             Err(e) => match e {
                 DatabaseError::PlayerNotFound => PlayerAchievementsResponse::NotFound(e.into()),
                 _ => {
-                    error!("Error fetching achievements for player `{}`: {e:?}", *ckey);
+                    error!(ckey = *ckey, err = ?e, "error fetching player achievements");
                     PlayerAchievementsResponse::InternalError(e.into())
                 }
             },
@@ -77,7 +77,7 @@ impl Endpoint {
             Err(e) => match e {
                 DatabaseError::PlayerNotFound => PlayerActivityResponse::NotFound(e.into()),
                 _ => {
-                    error!("Error fetching activity for player `{}`: {e:?}", *ckey);
+                    error!(ckey = *ckey, err = ?e, "error fetching player activity");
                     PlayerActivityResponse::InternalError(e.into())
                 }
             },
@@ -104,7 +104,7 @@ impl Endpoint {
             Err(e) => match e {
                 DatabaseError::PlayerNotFound => PlayerBansResponse::NotFound(e.into()),
                 _ => {
-                    error!("Error fetching bans for player `{}`: {e:?}", *ckey);
+                    error!(ckey = *ckey, err = ?e, "error fetching player bans");
                     PlayerBansResponse::InternalError(e.into())
                 }
             },
@@ -126,7 +126,7 @@ impl Endpoint {
             Err(e) => match e {
                 DatabaseError::PlayerNotFound => PlayerCharactersResponse::NotFound(e.into()),
                 _ => {
-                    error!("Error fetching characters for player `{}`: {e:?}", *ckey);
+                    error!(ckey = *ckey, err = ?e, "error fetching player characters");
                     PlayerCharactersResponse::InternalError(e.into())
                 }
             },

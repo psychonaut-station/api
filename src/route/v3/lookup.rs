@@ -26,7 +26,7 @@ impl Endpoint {
         match lookup_cid(&cid, &pool).await {
             Ok(lookup) => LookupResponse::Success(Json(lookup)),
             Err(e) => {
-                error!("Error fetching lookup for cid `{}`: {e:?}", *cid);
+                error!(cid = *cid, err = ?e, "error fetching cid lookup");
                 LookupResponse::InternalError(e.into())
             }
         }
@@ -46,7 +46,7 @@ impl Endpoint {
         match lookup_ip(&ip, &pool).await {
             Ok(lookup) => LookupResponse::Success(Json(lookup)),
             Err(e) => {
-                error!("Error fetching lookup for IP `{}`: {e:?}", *ip);
+                error!(ip = *ip, err = ?e, "error fetching ip lookup");
                 LookupResponse::InternalError(e.into())
             }
         }
@@ -65,7 +65,7 @@ impl Endpoint {
         match lookup_player(&ckey, &pool).await {
             Ok(lookup) => LookupResponse::Success(Json(lookup)),
             Err(e) => {
-                error!("Error fetching roletimes for player `{}`: {e:?}", *ckey);
+                error!(ckey = *ckey, err = ?e, "error fetching ckey lookup");
                 LookupResponse::InternalError(e.into())
             }
         }

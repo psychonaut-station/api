@@ -50,9 +50,7 @@ pub async fn status(address: SocketAddr) -> Result<Status> {
                     "public_address" => status.public_address = value.to_string(),
                     _ => {
                         #[cfg(debug_assertions)]
-                        tracing::warn!(
-                            "Status topic responsed with unknown param: {key} = {value} ({address})"
-                        );
+                        tracing::warn!(key = value, addr = %address, "status topic responsed with unknown param");
                     }
                 }
             }

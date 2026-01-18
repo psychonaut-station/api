@@ -27,7 +27,7 @@ impl Endpoint {
         let test_merges = match get_recent_test_merges(&pool).await {
             Ok(test_merges) => test_merges,
             Err(e) => {
-                error!("Error fetching recent test merges: {e:?}");
+                error!(err = ?e, "error fetching recent test merges");
                 return Response::InternalError(e.into());
             }
         };
