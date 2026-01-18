@@ -1,13 +1,29 @@
 use std::{
     fs::read_to_string,
     net::{IpAddr, SocketAddr},
+    ops::Deref,
     sync::Arc,
 };
 
 use serde::Deserialize;
 
-#[allow(dead_code)]
-pub type Config = Arc<InnerConfig>;
+#[derive(Clone)]
+pub struct Config(Arc<InnerConfig>);
+
+impl Config {
+    pub fn read_from_file(path: &str) -> Result<Self, Error> {
+        let content = read_to_string(path)?;
+        Ok(Self(Arc::new(toml::from_str::<InnerConfig>(&content)?)))
+    }
+}
+
+impl Deref for Config {
+    type Target = InnerConfig;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -35,13 +51,6 @@ pub struct ServerConfig {
     pub address: SocketAddr,
     pub connection_address: String,
     pub error_message: String,
-}
-
-impl InnerConfig {
-    pub fn read_from_file(path: &str) -> Result<Self, Error> {
-        let content = read_to_string(path)?;
-        Ok(toml::from_str::<Self>(&content)?)
-    }
 }
 
 #[derive(thiserror::Error, Debug)]

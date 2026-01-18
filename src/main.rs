@@ -5,7 +5,7 @@ mod database;
 mod route;
 mod sqlxext;
 
-use std::{net::SocketAddr, sync::Arc, time::Duration};
+use std::{net::SocketAddr, time::Duration};
 
 use poem::{EndpointExt, Server, listener::TcpListener, middleware::AddData};
 use sqlx::{
@@ -15,7 +15,7 @@ use sqlx::{
 
 use crate::{
     cache::Cache,
-    config::{DatabaseConfig, InnerConfig as Config},
+    config::{Config, DatabaseConfig},
 };
 
 #[tokio::main]
@@ -23,7 +23,7 @@ async fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
     tracing::subscriber::set_global_default(tracing_subscriber::fmt().finish())?;
 
-    let config = Arc::new(Config::read_from_file("config.toml")?);
+    let config = Config::read_from_file("config.toml")?;
 
     let socket = SocketAddr::new(config.address, config.port);
 
