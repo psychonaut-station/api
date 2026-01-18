@@ -431,7 +431,10 @@ pub async fn get_achievements(
     Ok(achievements)
 }
 
-pub async fn get_favorite_character(ckey: &str, pool: &MySqlPool) -> Result<(String, String), Error> {
+pub async fn get_favorite_character(
+    ckey: &str,
+    pool: &MySqlPool,
+) -> Result<(String, String), Error> {
     let mut connection = pool.acquire().await?;
 
     const EXCLUDED_ROLES: &str = "('Operative', 'Wizard')";
@@ -519,7 +522,7 @@ pub async fn get_tickets(
              FROM ticket 
              WHERE ticket = ? AND round_id = ? 
              AND action NOT IN ('Reconnected', 'Disconnected', 'Interaction')
-             ORDER BY timestamp ASC"
+             ORDER BY timestamp ASC",
         )
         .bind(t_id)
         .bind(r_id)
@@ -592,7 +595,7 @@ pub async fn get_messages(
           AND deleted = 0 
           AND (expire_timestamp > NOW() OR expire_timestamp IS NULL)
         ORDER BY timestamp DESC 
-        LIMIT ? OFFSET ?"
+        LIMIT ? OFFSET ?",
     )
     .bind(ckey.to_lowercase())
     .bind(fetch_size)
@@ -641,7 +644,7 @@ pub async fn get_notes(
           AND deleted = 0 
           AND (expire_timestamp > NOW() OR expire_timestamp IS NULL)
         ORDER BY timestamp DESC 
-        LIMIT ? OFFSET ?"
+        LIMIT ? OFFSET ?",
     )
     .bind(ckey.to_lowercase())
     .bind(fetch_size)
@@ -776,7 +779,10 @@ pub async fn get_friendship_invites(
         .fetch_all(&mut *connection)
         .await?;
 
-    if received_requests.is_empty() && sent_requests.is_empty() && !player_exists(ckey, &mut connection).await {
+    if received_requests.is_empty()
+        && sent_requests.is_empty()
+        && !player_exists(ckey, &mut connection).await
+    {
         connection.close().await?;
         return Err(Error::PlayerNotFound);
     }
@@ -807,7 +813,10 @@ pub async fn check_friendship(
         .fetch_optional(&mut *connection) // connection.acquire()'a gerek yok, direkt pool kullanabilirsin
         .await?;
 
-    if friendship.is_none() && !player_exists(friend, &mut connection).await && !player_exists(ckey, &mut connection).await {
+    if friendship.is_none()
+        && !player_exists(friend, &mut connection).await
+        && !player_exists(ckey, &mut connection).await
+    {
         connection.close().await?;
         return Err(Error::PlayerNotFound);
     }
@@ -817,7 +826,6 @@ pub async fn check_friendship(
     Ok(friendship)
 }
 
-
 pub async fn add_friend(
     ckey: &str,
     friend: &str,
@@ -826,7 +834,8 @@ pub async fn add_friend(
 ) -> Result<Option<Friendship>, Error> {
     let mut connection = pool.acquire().await?;
 
-    if !player_exists(friend, &mut connection).await && !player_exists(ckey, &mut connection).await {
+    if !player_exists(friend, &mut connection).await && !player_exists(ckey, &mut connection).await
+    {
         connection.close().await?;
         return Err(Error::PlayerNotFound);
     }
@@ -861,7 +870,6 @@ pub async fn add_friend(
 
     connection.close().await?;
     Ok(None)
-
 }
 
 pub async fn remove_friend(
