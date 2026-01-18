@@ -1,6 +1,6 @@
 use futures::TryStreamExt;
 use poem_openapi::Object;
-use sqlx::{Executor as _, MySqlPool, Row as _};
+use sqlx::{Executor as _, MySqlPool, Row as _, mysql::MySqlRow};
 
 use super::{Error, Result, player_exists};
 
@@ -10,6 +10,17 @@ pub struct PlayerRoletime {
     pub job: String,
     /// The total minutes played in this job
     pub minutes: u32,
+}
+
+impl TryFrom<MySqlRow> for PlayerRoletime {
+    type Error = sqlx::Error;
+
+    fn try_from(row: MySqlRow) -> std::result::Result<Self, Self::Error> {
+        Ok(PlayerRoletime {
+            job: row.try_get("job")?,
+            minutes: row.try_get("minutes")?,
+        })
+    }
 }
 
 pub async fn get_roletime_player(ckey: &str, pool: &MySqlPool) -> Result<Vec<PlayerRoletime>> {
@@ -22,16 +33,13 @@ pub async fn get_roletime_player(ckey: &str, pool: &MySqlPool) -> Result<Vec<Pla
 
     let mut roletimes = Vec::new();
 
-    {
-        let mut rows = connection.fetch(query);
+    let mut stream = connection.fetch(query);
 
-        while let Some(row) = rows.try_next().await? {
-            roletimes.push(PlayerRoletime {
-                job: row.try_get("job")?,
-                minutes: row.try_get("minutes")?,
-            });
-        }
+    while let Some(row) = stream.try_next().await? {
+        roletimes.push(row.try_into()?);
     }
+
+    drop(stream);
 
     if roletimes.is_empty() && !player_exists(ckey, &mut connection).await? {
         return Err(Error::PlayerNotFound);
@@ -48,6 +56,17 @@ pub struct JobRoletime {
     pub minutes: u32,
 }
 
+impl TryFrom<MySqlRow> for JobRoletime {
+    type Error = sqlx::Error;
+
+    fn try_from(row: MySqlRow) -> std::result::Result<Self, Self::Error> {
+        Ok(JobRoletime {
+            ckey: row.try_get("ckey")?,
+            minutes: row.try_get("minutes")?,
+        })
+    }
+}
+
 pub async fn get_roletime_top(job: &str, pool: &MySqlPool) -> Result<Vec<JobRoletime>> {
     let mut connection = pool.acquire().await?;
 
@@ -58,13 +77,10 @@ pub async fn get_roletime_top(job: &str, pool: &MySqlPool) -> Result<Vec<JobRole
 
     let mut roletimes = Vec::new();
 
-    let mut rows = connection.fetch(query);
+    let mut stream = connection.fetch(query);
 
-    while let Some(row) = rows.try_next().await? {
-        roletimes.push(JobRoletime {
-            ckey: row.try_get("ckey")?,
-            minutes: row.try_get("minutes")?,
-        });
+    while let Some(row) = stream.try_next().await? {
+        roletimes.push(row.try_into()?);
     }
 
     Ok(roletimes)
