@@ -9,7 +9,7 @@ pub use recent_test_merges::*;
 pub use roletime::*;
 
 use poem_openapi::payload::PlainText;
-use sqlx::{Executor as _, MySql, pool::PoolConnection};
+use sqlx::{Executor, MySql};
 
 type Result<T> = std::result::Result<T, Error>;
 
@@ -32,8 +32,8 @@ impl From<Error> for PlainText<String> {
     }
 }
 
-async fn player_exists(ckey: &str, connection: &mut PoolConnection<MySql>) -> Result<bool> {
+async fn player_exists(ckey: &str, executor: impl Executor<'_, Database = MySql>) -> Result<bool> {
     let query =
         sqlx::query("SELECT 1 FROM player WHERE LOWER(ckey) = ? LIMIT 1").bind(ckey.to_lowercase());
-    Ok(connection.fetch_optional(query).await?.is_some())
+    Ok(query.fetch_optional(executor).await?.is_some())
 }

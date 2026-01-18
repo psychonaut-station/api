@@ -1,7 +1,6 @@
 use const_format::formatcp as const_format;
-use futures::TryStreamExt as _;
 use poem_openapi::Object;
-use sqlx::{Executor as _, MySqlPool, Row as _, mysql::MySqlRow};
+use sqlx::{FromRow, MySqlPool, Row as _, mysql::MySqlRow};
 
 use super::Result;
 
@@ -18,10 +17,8 @@ pub struct Lookup {
     pub ckey: String,
 }
 
-impl TryFrom<MySqlRow> for Lookup {
-    type Error = sqlx::Error;
-
-    fn try_from(row: MySqlRow) -> std::result::Result<Self, Self::Error> {
+impl FromRow<'_, MySqlRow> for Lookup {
+    fn from_row(row: &MySqlRow) -> sqlx::Result<Self> {
         Ok(Lookup {
             computerid: row.try_get("computerid")?,
             ip: row.try_get("ip")?,
@@ -31,8 +28,6 @@ impl TryFrom<MySqlRow> for Lookup {
 }
 
 pub async fn lookup_cid(cid: &str, pool: &MySqlPool) -> Result<Vec<Lookup>> {
-    let mut connection = pool.acquire().await?;
-
     const SQL: &str = const_format!(
         "SELECT computerid, INET_NTOA(ip) AS ip, ckey FROM connection_log WHERE
          ip IN (SELECT DISTINCT ip FROM connection_log WHERE computerid = ?) OR
@@ -40,22 +35,12 @@ pub async fn lookup_cid(cid: &str, pool: &MySqlPool) -> Result<Vec<Lookup>> {
          {EXCLUSION_SUBNET} GROUP BY ckey, computerid, ip ORDER BY ckey, computerid, ip"
     );
 
-    let query = sqlx::query(SQL).bind(cid).bind(cid);
+    let query = sqlx::query_as(SQL).bind(cid).bind(cid);
 
-    let mut stream = connection.fetch(query);
-
-    let mut result = Vec::new();
-
-    while let Some(row) = stream.try_next().await? {
-        result.push(row.try_into()?);
-    }
-
-    Ok(result)
+    Ok(query.fetch_all(pool).await?)
 }
 
 pub async fn lookup_ip(ip: &str, pool: &MySqlPool) -> Result<Vec<Lookup>> {
-    let mut connection = pool.acquire().await?;
-
     const SQL: &str = const_format!(
         "SELECT computerid, INET_NTOA(ip) AS ip, ckey FROM connection_log WHERE
          computerid IN (SELECT DISTINCT computerid FROM connection_log WHERE ip = INET_ATON(?)) OR
@@ -63,22 +48,12 @@ pub async fn lookup_ip(ip: &str, pool: &MySqlPool) -> Result<Vec<Lookup>> {
          {EXCLUSION_SUBNET} GROUP BY ckey, computerid, ip ORDER BY ckey, computerid, ip"
     );
 
-    let query = sqlx::query(SQL).bind(ip).bind(ip);
+    let query = sqlx::query_as(SQL).bind(ip).bind(ip);
 
-    let mut stream = connection.fetch(query);
-
-    let mut result = Vec::new();
-
-    while let Some(row) = stream.try_next().await? {
-        result.push(row.try_into()?);
-    }
-
-    Ok(result)
+    Ok(query.fetch_all(pool).await?)
 }
 
 pub async fn lookup_player(ckey: &str, pool: &MySqlPool) -> Result<Vec<Lookup>> {
-    let mut connection = pool.acquire().await?;
-
     const SQL: &str = const_format!(
         "SELECT computerid, INET_NTOA(ip) AS ip, ckey FROM connection_log WHERE
          computerid IN (SELECT DISTINCT computerid FROM connection_log WHERE ckey = ?) OR
@@ -86,17 +61,7 @@ pub async fn lookup_player(ckey: &str, pool: &MySqlPool) -> Result<Vec<Lookup>> 
          {EXCLUSION_SUBNET} GROUP BY ckey, computerid, ip ORDER BY ckey, computerid, ip"
     );
 
-    let query = sqlx::query(SQL)
-        .bind(ckey.to_lowercase())
-        .bind(ckey.to_lowercase());
+    let query = sqlx::query_as(SQL).bind(ckey).bind(ckey);
 
-    let mut stream = connection.fetch(query);
-
-    let mut result = Vec::new();
-
-    while let Some(row) = stream.try_next().await? {
-        result.push(row.try_into()?);
-    }
-
-    Ok(result)
+    Ok(query.fetch_all(pool).await?)
 }

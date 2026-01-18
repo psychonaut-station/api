@@ -1,7 +1,6 @@
 use const_format::formatcp as const_format;
-use futures::TryStreamExt;
 use poem_openapi::{Enum, Object};
-use sqlx::{Executor as _, MySqlPool, Row as _, mysql::MySqlRow};
+use sqlx::{FromRow, MySqlPool, Row as _, mysql::MySqlRow};
 
 use crate::sqlxext::{Date, DateTime};
 
@@ -28,10 +27,8 @@ pub struct Player {
     pub byond_age: Option<String>,
 }
 
-impl TryFrom<MySqlRow> for Player {
-    type Error = sqlx::Error;
-
-    fn try_from(row: MySqlRow) -> std::result::Result<Self, Self::Error> {
+impl FromRow<'_, MySqlRow> for Player {
+    fn from_row(row: &MySqlRow) -> sqlx::Result<Self> {
         Ok(Player {
             ckey: row.try_get("ckey")?,
             byond_key: row.try_get("byond_key")?,
@@ -47,19 +44,14 @@ impl TryFrom<MySqlRow> for Player {
 }
 
 pub async fn get_player(ckey: &str, pool: &MySqlPool) -> Result<Player> {
-    let mut connection = pool.acquire().await?;
-
-    let query = sqlx::query(
+    let query = sqlx::query_as(
         "SELECT ckey, byond_key, firstseen, firstseen_round_id, lastseen, lastseen_round_id, INET_NTOA(ip), computerid, accountjoindate FROM player WHERE LOWER(ckey) = ? LIMIT 1"
     )
     .bind(ckey.to_lowercase());
 
-    let row = connection.fetch_optional(query).await?;
+    let player = query.fetch_optional(pool).await?;
 
-    match row {
-        Some(row) => Ok(row.try_into()?),
-        None => Err(Error::PlayerNotFound),
-    }
+    player.ok_or(Error::PlayerNotFound)
 }
 
 #[derive(Object)]
@@ -83,10 +75,8 @@ pub struct Achievement {
     pub timestamp: String,
 }
 
-impl TryFrom<MySqlRow> for Achievement {
-    type Error = sqlx::Error;
-
-    fn try_from(row: MySqlRow) -> std::result::Result<Self, Self::Error> {
+impl FromRow<'_, MySqlRow> for Achievement {
+    fn from_row(row: &MySqlRow) -> sqlx::Result<Self> {
         Ok(Achievement {
             achievement_key: row.try_get("achievement_key")?,
             achievement_version: row.try_get("achievement_version")?,
@@ -127,8 +117,6 @@ pub async fn get_player_achievements(
     achievement_type: &Option<String>,
     pool: &MySqlPool,
 ) -> Result<Vec<Achievement>> {
-    let mut connection = pool.acquire().await?;
-
     let mut sql = "SELECT m.achievement_key, m.achievement_version, m.achievement_type, m.achievement_name, m.achievement_description, a.value, a.last_updated FROM achievements a JOIN achievement_metadata m ON a.achievement_key = m.achievement_key WHERE LOWER(a.ckey) = ?".to_string();
 
     if achievement_type.is_some() {
@@ -137,23 +125,15 @@ pub async fn get_player_achievements(
 
     sql.push_str(" ORDER BY a.last_updated DESC");
 
-    let mut query = sqlx::query(&sql).bind(ckey.to_lowercase());
+    let mut query = sqlx::query_as(&sql).bind(ckey.to_lowercase());
 
     if let Some(achievement_type) = achievement_type {
         query = query.bind(achievement_type);
     }
 
-    let mut achievements = Vec::new();
+    let achievements = query.fetch_all(pool).await?;
 
-    let mut stream = connection.fetch(query);
-
-    while let Some(row) = stream.try_next().await? {
-        achievements.push(row.try_into()?);
-    }
-
-    drop(stream);
-
-    if achievements.is_empty() && !player_exists(ckey, &mut connection).await? {
+    if achievements.is_empty() && !player_exists(ckey, pool).await? {
         return Err(Error::PlayerNotFound);
     }
 
@@ -187,10 +167,8 @@ pub struct Ban {
     pub unbanned_ckey: Option<String>,
 }
 
-impl TryFrom<MySqlRow> for Ban {
-    type Error = sqlx::Error;
-
-    fn try_from(row: MySqlRow) -> std::result::Result<Self, Self::Error> {
+impl FromRow<'_, MySqlRow> for Ban {
+    fn from_row(row: &MySqlRow) -> sqlx::Result<Self> {
         Ok(Ban {
             bantime: row.try_get::<DateTime, _>("bantime")?.into(),
             round_id: row.try_get("round_id")?,
@@ -216,8 +194,6 @@ pub async fn get_player_bans(
     since: &Option<String>,
     pool: &MySqlPool,
 ) -> Result<Vec<Ban>> {
-    let mut connection = pool.acquire().await?;
-
     let mut sql = "SELECT id, bantime, round_id, GROUP_CONCAT(role ORDER BY role SEPARATOR ', ') AS roles, expiration_time, reason, ckey, a_ckey, edits, unbanned_datetime, unbanned_ckey FROM ban WHERE LOWER(ckey) = ?".to_string();
 
     if permanent {
@@ -230,23 +206,15 @@ pub async fn get_player_bans(
 
     sql.push_str(" GROUP BY bantime");
 
-    let mut query = sqlx::query(&sql).bind(ckey.to_lowercase());
+    let mut query = sqlx::query_as(&sql).bind(ckey.to_lowercase());
 
     if let Some(since) = since {
         query = query.bind(since);
     }
 
-    let mut bans = Vec::new();
+    let bans = query.fetch_all(pool).await?;
 
-    let mut stream = connection.fetch(query);
-
-    while let Some(row) = stream.try_next().await? {
-        bans.push(row.try_into()?);
-    }
-
-    drop(stream);
-
-    if bans.is_empty() && !player_exists(ckey, &mut connection).await? {
+    if bans.is_empty() && !player_exists(ckey, pool).await? {
         return Err(Error::PlayerNotFound);
     }
 
@@ -261,10 +229,8 @@ pub struct Character {
     pub occurrences: i64,
 }
 
-impl TryFrom<MySqlRow> for Character {
-    type Error = sqlx::Error;
-
-    fn try_from(row: MySqlRow) -> std::result::Result<Self, Self::Error> {
+impl FromRow<'_, MySqlRow> for Character {
+    fn from_row(row: &MySqlRow) -> sqlx::Result<Self> {
         Ok(Character {
             name: row.try_get("character_name")?,
             occurrences: row.try_get("times")?,
@@ -273,27 +239,17 @@ impl TryFrom<MySqlRow> for Character {
 }
 
 pub async fn get_player_characters(ckey: &str, pool: &MySqlPool) -> Result<Vec<Character>> {
-    let mut connection = pool.acquire().await?;
-
     const EXCLUDED_ROLES: &str = "('Operative', 'Wizard')";
 
     let sql = const_format!(
         "SELECT character_name, COUNT(*) AS times FROM manifest WHERE ckey = ? AND special NOT IN {EXCLUDED_ROLES} GROUP BY character_name ORDER BY times DESC"
     );
 
-    let query = sqlx::query(sql).bind(ckey.to_lowercase());
+    let query = sqlx::query_as(sql).bind(ckey.to_lowercase());
 
-    let mut characters = Vec::new();
+    let characters = query.fetch_all(pool).await?;
 
-    let mut stream = connection.fetch(query);
-
-    while let Some(row) = stream.try_next().await? {
-        characters.push(row.try_into()?);
-    }
-
-    drop(stream);
-
-    if characters.is_empty() && !player_exists(ckey, &mut connection).await? {
+    if characters.is_empty() && !player_exists(ckey, pool).await? {
         return Err(Error::PlayerNotFound);
     }
 
@@ -308,10 +264,8 @@ pub struct Activity {
     pub rounds: i64,
 }
 
-impl TryFrom<MySqlRow> for Activity {
-    type Error = sqlx::Error;
-
-    fn try_from(row: MySqlRow) -> std::result::Result<Self, Self::Error> {
+impl FromRow<'_, MySqlRow> for Activity {
+    fn from_row(row: &MySqlRow) -> sqlx::Result<Self> {
         Ok(Activity {
             date: row.try_get::<Date, _>("date")?.into(),
             rounds: row.try_get("rounds")?,
@@ -320,24 +274,14 @@ impl TryFrom<MySqlRow> for Activity {
 }
 
 pub async fn get_player_activity(ckey: &str, pool: &MySqlPool) -> Result<Vec<Activity>> {
-    let mut connection = pool.acquire().await?;
-
-    let query = sqlx::query(
+    let query = sqlx::query_as(
         "SELECT DATE(datetime) AS date, COUNT(DISTINCT round_id) AS rounds FROM connection_log WHERE ckey = ? AND datetime >= DATE_SUB(CURDATE(), INTERVAL 180 DAY) GROUP BY date;"
     )
     .bind(ckey.to_lowercase());
 
-    let mut activity = Vec::new();
+    let activity = query.fetch_all(pool).await?;
 
-    let mut stream = connection.fetch(query);
-
-    while let Some(row) = stream.try_next().await? {
-        activity.push(row.try_into()?);
-    }
-
-    drop(stream);
-
-    if activity.is_empty() && !player_exists(ckey, &mut connection).await? {
+    if activity.is_empty() && !player_exists(ckey, pool).await? {
         return Err(Error::PlayerNotFound);
     }
 

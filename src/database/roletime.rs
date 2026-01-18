@@ -1,6 +1,5 @@
-use futures::TryStreamExt;
 use poem_openapi::Object;
-use sqlx::{Executor as _, MySqlPool, Row as _, mysql::MySqlRow};
+use sqlx::{FromRow, MySqlPool, Row as _, mysql::MySqlRow};
 
 use super::{Error, Result, player_exists};
 
@@ -12,10 +11,8 @@ pub struct PlayerRoletime {
     pub minutes: u32,
 }
 
-impl TryFrom<MySqlRow> for PlayerRoletime {
-    type Error = sqlx::Error;
-
-    fn try_from(row: MySqlRow) -> std::result::Result<Self, Self::Error> {
+impl FromRow<'_, MySqlRow> for PlayerRoletime {
+    fn from_row(row: &MySqlRow) -> sqlx::Result<Self> {
         Ok(PlayerRoletime {
             job: row.try_get("job")?,
             minutes: row.try_get("minutes")?,
@@ -24,24 +21,14 @@ impl TryFrom<MySqlRow> for PlayerRoletime {
 }
 
 pub async fn get_roletime_player(ckey: &str, pool: &MySqlPool) -> Result<Vec<PlayerRoletime>> {
-    let mut connection = pool.acquire().await?;
-
-    let query = sqlx::query(
+    let query = sqlx::query_as(
         "SELECT job, minutes FROM role_time WHERE LOWER(ckey) = ? ORDER BY minutes DESC",
     )
     .bind(ckey.to_lowercase());
 
-    let mut roletimes = Vec::new();
+    let roletimes = query.fetch_all(pool).await?;
 
-    let mut stream = connection.fetch(query);
-
-    while let Some(row) = stream.try_next().await? {
-        roletimes.push(row.try_into()?);
-    }
-
-    drop(stream);
-
-    if roletimes.is_empty() && !player_exists(ckey, &mut connection).await? {
+    if roletimes.is_empty() && !player_exists(ckey, pool).await? {
         return Err(Error::PlayerNotFound);
     }
 
@@ -56,10 +43,8 @@ pub struct JobRoletime {
     pub minutes: u32,
 }
 
-impl TryFrom<MySqlRow> for JobRoletime {
-    type Error = sqlx::Error;
-
-    fn try_from(row: MySqlRow) -> std::result::Result<Self, Self::Error> {
+impl FromRow<'_, MySqlRow> for JobRoletime {
+    fn from_row(row: &MySqlRow) -> sqlx::Result<Self> {
         Ok(JobRoletime {
             ckey: row.try_get("ckey")?,
             minutes: row.try_get("minutes")?,
@@ -68,20 +53,10 @@ impl TryFrom<MySqlRow> for JobRoletime {
 }
 
 pub async fn get_roletime_top(job: &str, pool: &MySqlPool) -> Result<Vec<JobRoletime>> {
-    let mut connection = pool.acquire().await?;
-
-    let query = sqlx::query(
+    let query = sqlx::query_as(
         "SELECT ckey, minutes FROM role_time WHERE LOWER(job) = ? ORDER BY minutes DESC LIMIT 15",
     )
     .bind(job.to_lowercase());
 
-    let mut roletimes = Vec::new();
-
-    let mut stream = connection.fetch(query);
-
-    while let Some(row) = stream.try_next().await? {
-        roletimes.push(row.try_into()?);
-    }
-
-    Ok(roletimes)
+    Ok(query.fetch_all(pool).await?)
 }
