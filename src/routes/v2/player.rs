@@ -1,4 +1,4 @@
-use rocket::{get, http::Status, State};
+use rocket::{get, http::Status, post, State};
 use serde_json::{json, Value};
 
 use crate::{
@@ -128,6 +128,197 @@ pub async fn achievements(
 ) -> Result<Json<Value>, Status> {
     match get_achievements(ckey, achievement_type, &database.pool).await {
         Ok(achievements) => Ok(Json::Ok(json!(achievements))),
+        Err(Error::PlayerNotFound) => Err(Status::NotFound),
+        Err(_) => Err(Status::InternalServerError),
+    }
+}
+
+#[get("/player/favorite_character?<ckey>")]
+pub async fn fav_character(
+    ckey: &str,
+    database: &State<Database>,
+    _api_key: ApiKey,
+) -> Result<Json<(String, String)>, Status> {
+    match get_favorite_character(ckey, &database.pool).await {
+        Ok(data) => Ok(Json::Ok(data)),
+        Err(Error::PlayerNotFound) => Err(Status::NotFound),
+        Err(_) => Err(Status::InternalServerError),
+    }
+}
+
+#[get("/player/tickets?<ckey>&<fetch_size>&<page>")]
+pub async fn tickets(
+    ckey: &str,
+    fetch_size: Option<i32>,
+    page: Option<i32>,
+    database: &State<Database>,
+    _api_key: ApiKey,
+) -> Result<Json<Value>, Status> {
+    match get_tickets(ckey, fetch_size, page, &database.pool).await {
+        Ok((tickets, total_count)) => Ok(Json::Ok(json!({
+            "data": tickets,
+            "total_count": total_count
+        }))),
+        Err(Error::PlayerNotFound) => Err(Status::NotFound),
+        Err(_) => Err(Status::InternalServerError),
+    }
+}
+
+#[get("/player/messages?<ckey>&<fetch_size>&<page>")]
+pub async fn messages(
+    ckey: &str,
+    fetch_size: Option<i32>,
+    page: Option<i32>,
+    database: &State<Database>,
+    _api_key: ApiKey,
+) -> Result<Json<Value>, Status> {
+    match get_messages(ckey, fetch_size, page, &database.pool).await {
+        Ok((messages, total_count)) => Ok(Json::Ok(json!({
+            "data": messages,
+            "total_count": total_count
+        }))),
+        Err(Error::PlayerNotFound) => Err(Status::NotFound),
+        Err(_) => Err(Status::InternalServerError),
+    }
+}
+
+#[get("/player/notes?<ckey>&<fetch_size>&<page>")]
+pub async fn notes(
+    ckey: &str,
+    fetch_size: Option<i32>,
+    page: Option<i32>,
+    database: &State<Database>,
+    _api_key: ApiKey,
+) -> Result<Json<Value>, Status> {
+    match get_notes(ckey, fetch_size, page, &database.pool).await {
+        Ok((notes, total_count)) => Ok(Json::Ok(json!({
+            "data": notes,
+            "total_count": total_count
+        }))),
+        Err(Error::PlayerNotFound) => Err(Status::NotFound),
+        Err(_) => Err(Status::InternalServerError),
+    }
+}
+
+#[get("/player/rounds?<ckey>&<fetch_size>&<page>")]
+pub async fn rounds(
+    ckey: &str,
+    fetch_size: Option<i32>,
+    page: Option<i32>,
+    database: &State<Database>,
+    _api_key: ApiKey,
+) -> Result<Json<Value>, Status> {
+    match get_player_rounds(ckey, fetch_size, page, &database.pool).await {
+        Ok((rounds, total_count)) => Ok(Json::Ok(json!({
+            "data": rounds,
+            "total_count": total_count
+        }))),
+        Err(Error::PlayerNotFound) => Err(Status::NotFound),
+        Err(_) => Err(Status::InternalServerError),
+    }
+}
+
+#[get("/player/friends?<ckey>")]
+pub async fn friends(
+    ckey: &str,
+    config: &State<Config>,
+    database: &State<Database>,
+    _api_key: ApiKey,
+) -> Result<Json<Vec<Friendship>>, Status> {
+    match get_friends(ckey, &database.pool, config).await {
+        Ok(friends) => Ok(Json::Ok(friends)),
+        Err(Error::PlayerNotFound) => Err(Status::NotFound),
+        Err(_) => Err(Status::InternalServerError),
+    }
+}
+
+#[get("/player/friend_invites?<ckey>")]
+pub async fn friend_invites(
+    ckey: &str,
+    config: &State<Config>,
+    database: &State<Database>,
+    _api_key: ApiKey,
+) -> Result<Json<Value>, Status> {
+    match get_friendship_invites(ckey, &database.pool, config).await {
+        Ok((received, sent)) => Ok(Json::Ok(json!({
+            "received": received,
+            "sent": sent
+        }))),
+        Err(Error::PlayerNotFound) => Err(Status::NotFound),
+        Err(_) => Err(Status::InternalServerError),
+    }
+}
+
+#[get("/player/check_friends?<ckey>&<friend>")]
+pub async fn check_friends(
+    ckey: &str,
+    friend: &str,
+    config: &State<Config>,
+    database: &State<Database>,
+    _api_key: ApiKey,
+) -> Result<Json<Option<Friendship>>, Status> {
+    match check_friendship(ckey, friend, &database.pool, config).await {
+        Ok(friend) => Ok(Json::Ok(friend)),
+        Err(Error::PlayerNotFound) => Err(Status::NotFound),
+        Err(_) => Err(Status::InternalServerError),
+    }
+}
+
+#[post("/player/add_friend?<ckey>&<friend>")]
+pub async fn addfriend(
+    ckey: &str,
+    friend: &str,
+    config: &State<Config>,
+    database: &State<Database>,
+    _api_key: ApiKey,
+) -> Result<Json<Option<Friendship>>, Status> {
+    match add_friend(ckey, friend, &database.pool, config).await {
+        Ok(friend) => Ok(Json::Ok(friend)),
+        Err(Error::PlayerNotFound) => Err(Status::NotFound),
+        Err(_) => Err(Status::InternalServerError),
+    }
+}
+
+#[post("/player/remove_friend?<ckey>&<friendship_id>")]
+pub async fn removefriend(
+    ckey: &str,
+    friendship_id: i32,
+    config: &State<Config>,
+    database: &State<Database>,
+    _api_key: ApiKey,
+) -> Result<Json<Option<Friendship>>, Status> {
+    match remove_friend(ckey, friendship_id, &database.pool, config).await {
+        Ok(friend) => Ok(Json::Ok(friend)),
+        Err(Error::PlayerNotFound) => Err(Status::NotFound),
+        Err(_) => Err(Status::InternalServerError),
+    }
+}
+
+#[post("/player/accept_friend?<ckey>&<friendship_id>")]
+pub async fn acceptfriend(
+    ckey: &str,
+    friendship_id: i32,
+    config: &State<Config>,
+    database: &State<Database>,
+    _api_key: ApiKey,
+) -> Result<Json<Option<Friendship>>, Status> {
+    match accept_friend(ckey, friendship_id, &database.pool, config).await {
+        Ok(friend) => Ok(Json::Ok(friend)),
+        Err(Error::PlayerNotFound) => Err(Status::NotFound),
+        Err(_) => Err(Status::InternalServerError),
+    }
+}
+
+#[post("/player/decline_friend?<ckey>&<friendship_id>")]
+pub async fn declinefriend(
+    ckey: &str,
+    friendship_id: i32,
+    config: &State<Config>,
+    database: &State<Database>,
+    _api_key: ApiKey,
+) -> Result<Json<Option<Friendship>>, Status> {
+    match decline_friend(ckey, friendship_id, &database.pool, config).await {
+        Ok(friend) => Ok(Json::Ok(friend)),
         Err(Error::PlayerNotFound) => Err(Status::NotFound),
         Err(_) => Err(Status::InternalServerError),
     }

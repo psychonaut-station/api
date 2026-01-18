@@ -275,7 +275,7 @@ pub async fn get_ic_names(ic_name: &str, pool: &MySqlPool) -> Result<Vec<IcName>
     let mut connection = pool.acquire().await?;
 
     let query = sqlx::query(
-        "SELECT DISTINCT name, byondkey FROM death WHERE name LIKE ? ORDER BY name ASC LIMIT 25",
+        "SELECT DISTINCT character_name, ckey FROM manifest WHERE character_name LIKE ? ORDER BY character_name ASC LIMIT 25",
     )
     .bind(format!("%{ic_name}%"));
 
@@ -288,8 +288,8 @@ pub async fn get_ic_names(ic_name: &str, pool: &MySqlPool) -> Result<Vec<IcName>
             let row = row?;
 
             ckeys.push(IcName {
-                name: row.try_get("name")?,
-                ckey: row.try_get("byondkey")?,
+                name: row.try_get("character_name")?,
+                ckey: row.try_get("ckey")?,
             });
         }
     }
@@ -429,6 +429,563 @@ pub async fn get_achievements(
     connection.close().await?;
 
     Ok(achievements)
+}
+
+pub async fn get_favorite_character(ckey: &str, pool: &MySqlPool) -> Result<(String, String), Error> {
+    let mut connection = pool.acquire().await?;
+
+    const EXCLUDED_ROLES: &str = "('Operative', 'Wizard')";
+
+    let query = sqlx::query(concatcp!(
+        "SELECT character_name, job, COUNT(*) AS times FROM manifest WHERE ckey = ? AND special NOT IN ",
+        EXCLUDED_ROLES,
+        " GROUP BY character_name, job ORDER BY times DESC LIMIT 1"
+    ))
+    .bind(ckey.to_lowercase());
+
+    let Ok(row) = connection.fetch_one(query).await else {
+        return Err(Error::PlayerNotFound);
+    };
+
+    let character_name = row.try_get("character_name")?;
+    let job = row.try_get("job")?;
+
+    connection.close().await?;
+
+    Ok((character_name, job))
+}
+
+#[derive(Serialize, Debug, FromRow)]
+pub struct TicketLog {
+    pub action: String,
+    pub message: String,
+    pub sender: Option<String>,
+    pub recipient: Option<String>,
+    #[serde(with = "crate::serde::datetime")]
+    pub timestamp: chrono::NaiveDateTime,
+}
+
+#[derive(Serialize, Debug)]
+pub struct TicketGroup {
+    pub ticket_id: u32,
+    pub round_id: u32,
+    pub logs: Vec<TicketLog>,
+}
+
+pub async fn get_tickets(
+    ckey: &str,
+    fetch_size: Option<i32>,
+    page: Option<i32>,
+    pool: &MySqlPool,
+) -> Result<(Vec<TicketGroup>, i64), Error> {
+    let fetch_size = fetch_size.unwrap_or(10);
+    let page = page.unwrap_or(1);
+    let offset = (page - 1) * fetch_size;
+
+    let mut connection = pool.acquire().await?;
+
+    let total_count: i64 = sqlx::query_scalar(
+        "SELECT COUNT(DISTINCT ticket, round_id) FROM ticket 
+         WHERE action = 'Ticket Opened' AND ((LOWER(sender) = ? AND recipient IS NULL) OR (LOWER(recipient) = ?))"
+    )
+    .bind(ckey.to_lowercase())
+    .bind(ckey.to_lowercase())
+    .fetch_one(&mut *connection)
+    .await?;
+
+    let target_tickets = sqlx::query(
+        "SELECT ticket, round_id, MAX(timestamp) as latest_time 
+         FROM ticket 
+         WHERE action = 'Ticket Opened' AND ((LOWER(sender) = ? AND recipient IS NULL) OR (LOWER(recipient) = ?)) 
+         GROUP BY round_id, ticket 
+         ORDER BY latest_time DESC, round_id DESC, ticket DESC 
+         LIMIT ? OFFSET ?"
+    )
+    .bind(ckey.to_lowercase())
+    .bind(ckey.to_lowercase())
+    .bind(fetch_size)
+    .bind(offset)
+    .fetch_all(&mut *connection)
+    .await?;
+
+    let mut results = Vec::new();
+
+    for row in target_tickets {
+        let t_id: u32 = row.get("ticket");
+        let r_id: u32 = row.get("round_id");
+
+        let logs = sqlx::query_as::<_, TicketLog>(
+            "SELECT action, message, sender, recipient, timestamp 
+             FROM ticket 
+             WHERE ticket = ? AND round_id = ? 
+             AND action NOT IN ('Reconnected', 'Disconnected', 'Interaction')
+             ORDER BY timestamp ASC"
+        )
+        .bind(t_id)
+        .bind(r_id)
+        .fetch_all(&mut *connection)
+        .await?;
+
+        results.push(TicketGroup {
+            ticket_id: t_id,
+            round_id: r_id,
+            logs,
+        });
+    }
+
+    if results.is_empty() && !player_exists(ckey, &mut connection).await {
+        connection.close().await?;
+        return Err(Error::PlayerNotFound);
+    }
+
+    connection.close().await?;
+
+    Ok((results, total_count))
+}
+
+#[derive(Debug, Serialize, sqlx::FromRow)]
+pub struct Message {
+    pub id: i32,
+    pub targetckey: String,
+    pub adminckey: String,
+    pub text: String,
+    #[serde(with = "crate::serde::datetime")]
+    pub timestamp: chrono::NaiveDateTime,
+    pub server: Option<String>,
+    pub round_id: Option<u32>,
+    #[serde(with = "crate::serde::opt_datetime")]
+    pub expire_timestamp: Option<chrono::NaiveDateTime>,
+    pub severity: Option<String>,
+    pub playtime: Option<u32>,
+    pub lasteditor: Option<String>,
+    pub days_passed: i32,
+}
+
+pub async fn get_messages(
+    ckey: &str,
+    fetch_size: Option<i32>,
+    page: Option<i32>,
+    pool: &MySqlPool,
+) -> Result<(Vec<Message>, i64), Error> {
+    let fetch_size = fetch_size.unwrap_or(10);
+    let page = page.unwrap_or(1);
+    let offset = (page - 1) * fetch_size;
+
+    let mut connection = pool.acquire().await?;
+
+    let sql = "SELECT COUNT(*) FROM messages WHERE type IN ('message', 'message sent') AND LOWER(targetckey) = ? AND secret = 0 AND deleted = 0 AND (expire_timestamp > NOW() OR expire_timestamp IS NULL)".to_string();
+
+    let query = sqlx::query_scalar(&sql).bind(ckey.to_lowercase());
+
+    let total_count = query.fetch_one(&mut *connection).await?;
+
+    let messages = sqlx::query_as::<_, Message>(
+        "SELECT 
+            id, targetckey, adminckey, text, timestamp, 
+            server, round_id, expire_timestamp, 
+            severity, playtime, lasteditor,
+            DATEDIFF(NOW(), timestamp) AS days_passed
+        FROM messages
+        WHERE type IN ('message', 'message sent') 
+          AND LOWER(targetckey) = ? 
+          AND secret = 0 
+          AND deleted = 0 
+          AND (expire_timestamp > NOW() OR expire_timestamp IS NULL)
+        ORDER BY timestamp DESC 
+        LIMIT ? OFFSET ?"
+    )
+    .bind(ckey.to_lowercase())
+    .bind(fetch_size)
+    .bind(offset)
+    .fetch_all(&mut *connection)
+    .await?;
+
+    if messages.is_empty() && !player_exists(ckey, &mut connection).await {
+        connection.close().await?;
+        return Err(Error::PlayerNotFound);
+    }
+
+    connection.close().await?;
+
+    Ok((messages, total_count))
+}
+
+pub async fn get_notes(
+    ckey: &str,
+    fetch_size: Option<i32>,
+    page: Option<i32>,
+    pool: &MySqlPool,
+) -> Result<(Vec<Message>, i64), Error> {
+    let fetch_size = fetch_size.unwrap_or(10);
+    let page = page.unwrap_or(1);
+    let offset = (page - 1) * fetch_size;
+
+    let mut connection = pool.acquire().await?;
+
+    let sql = "SELECT COUNT(*) FROM messages WHERE type = 'note' AND LOWER(targetckey) = ? AND secret = 0 AND deleted = 0 AND (expire_timestamp > NOW() OR expire_timestamp IS NULL)".to_string();
+
+    let query = sqlx::query_scalar(&sql).bind(ckey.to_lowercase());
+
+    let total_count = query.fetch_one(&mut *connection).await?;
+
+    let messages = sqlx::query_as::<_, Message>(
+        "SELECT 
+            id, targetckey, adminckey, text, timestamp, 
+            server, round_id, expire_timestamp, 
+            severity, playtime, lasteditor,
+            DATEDIFF(NOW(), timestamp) AS days_passed
+        FROM messages
+        WHERE type = 'note' 
+          AND LOWER(targetckey) = ? 
+          AND secret = 0 
+          AND deleted = 0 
+          AND (expire_timestamp > NOW() OR expire_timestamp IS NULL)
+        ORDER BY timestamp DESC 
+        LIMIT ? OFFSET ?"
+    )
+    .bind(ckey.to_lowercase())
+    .bind(fetch_size)
+    .bind(offset)
+    .fetch_all(&mut *connection)
+    .await?;
+
+    if messages.is_empty() && !player_exists(ckey, &mut connection).await {
+        connection.close().await?;
+        return Err(Error::PlayerNotFound);
+    }
+
+    connection.close().await?;
+
+    Ok((messages, total_count))
+}
+
+#[derive(Debug, Serialize, sqlx::FromRow)]
+pub struct ManifestData {
+    pub id: i32,
+    pub round_id: i32,
+    pub ckey: String,
+    pub character_name: String,
+    pub job: String,
+    pub special: Option<String>,
+    pub latejoin: bool,
+    #[serde(with = "crate::serde::datetime")]
+    pub timestamp: NaiveDateTime,
+}
+
+pub async fn get_player_rounds(
+    ckey: &str,
+    fetch_size: Option<i32>,
+    page: Option<i32>,
+    pool: &MySqlPool,
+) -> Result<(Vec<ManifestData>, i64), Error> {
+    let fetch_size = fetch_size.unwrap_or(10);
+    let page = page.unwrap_or(1);
+    let offset = (page - 1) * fetch_size;
+
+    let mut connection = pool.acquire().await?;
+
+    let sql = "SELECT COUNT(*) FROM manifest WHERE LOWER(ckey) = ?".to_string();
+
+    let query = sqlx::query_scalar(&sql).bind(ckey.to_lowercase());
+
+    let total_count = query.fetch_one(&mut *connection).await?;
+
+    let rounds = sqlx::query_as::<_, ManifestData>(
+        "SELECT id, round_id, ckey, character_name, job, special, latejoin, timestamp FROM manifest WHERE LOWER(ckey) = ? ORDER BY timestamp DESC LIMIT ? OFFSET ?"
+    )
+    .bind(ckey.to_lowercase())
+    .bind(fetch_size)
+    .bind(offset)
+    .fetch_all(&mut *connection)
+    .await?;
+
+    if rounds.is_empty() && !player_exists(ckey, &mut connection).await {
+        connection.close().await?;
+        return Err(Error::PlayerNotFound);
+    }
+
+    connection.close().await?;
+
+    Ok((rounds, total_count))
+}
+
+#[derive(Debug, Serialize, FromRow)]
+pub struct Friendship {
+    pub id: i32,
+    pub user_ckey: String,
+    pub friend_ckey: String,
+    pub status: String,
+    #[serde(with = "crate::serde::datetime")]
+    pub created_at: NaiveDateTime,
+    #[serde(with = "crate::serde::datetime")]
+    pub updated_at: NaiveDateTime,
+}
+
+pub async fn get_friends(
+    ckey: &str,
+    pool: &MySqlPool,
+    config: &Config,
+) -> Result<Vec<Friendship>, Error> {
+    let mut connection = pool.acquire().await?;
+
+    let sql = format!(
+        "SELECT * FROM {}.friendship WHERE (LOWER(user_ckey) = ? OR LOWER(friend_ckey) = ?) AND status = 'accepted'",
+        config.database.api_database
+    );
+
+    let friends = sqlx::query_as::<_, Friendship>(&sql)
+        .bind(ckey.to_lowercase())
+        .bind(ckey.to_lowercase())
+        .fetch_all(&mut *connection)
+        .await?;
+
+    if friends.is_empty() && !player_exists(ckey, &mut connection).await {
+        connection.close().await?;
+        return Err(Error::PlayerNotFound);
+    }
+
+    connection.close().await?;
+
+    Ok(friends)
+}
+
+pub async fn get_friendship_invites(
+    ckey: &str,
+    pool: &MySqlPool,
+    config: &Config,
+) -> Result<(Vec<Friendship>, Vec<Friendship>), Error> {
+    let mut connection = pool.acquire().await?;
+
+    let sql = format!(
+        "SELECT * FROM {}.friendship WHERE LOWER(friend_ckey) = ? AND status = 'pending'",
+        config.database.api_database
+    );
+
+    let received_requests = sqlx::query_as::<_, Friendship>(&sql)
+        .bind(ckey.to_lowercase())
+        .fetch_all(&mut *connection)
+        .await?;
+
+    let sql = format!(
+        "SELECT * FROM {}.friendship WHERE LOWER(user_ckey) = ? AND status = 'pending'",
+        config.database.api_database
+    );
+
+    let sent_requests = sqlx::query_as::<_, Friendship>(&sql)
+        .bind(ckey.to_lowercase())
+        .fetch_all(&mut *connection)
+        .await?;
+
+    if received_requests.is_empty() && sent_requests.is_empty() && !player_exists(ckey, &mut connection).await {
+        connection.close().await?;
+        return Err(Error::PlayerNotFound);
+    }
+
+    connection.close().await?;
+
+    Ok((received_requests, sent_requests))
+}
+
+pub async fn check_friendship(
+    ckey: &str,
+    friend: &str,
+    pool: &MySqlPool,
+    config: &Config,
+) -> Result<Option<Friendship>, Error> {
+    let mut connection = pool.acquire().await?;
+
+    let sql = format!(
+        "SELECT * FROM {}.friendship WHERE ((LOWER(user_ckey) = ? AND LOWER(friend_ckey) = ?) OR (LOWER(user_ckey) = ? AND LOWER(friend_ckey) = ?)) LIMIT 1",
+        config.database.api_database
+    );
+
+    let friendship = sqlx::query_as::<_, Friendship>(&sql)
+        .bind(ckey.to_lowercase())
+        .bind(friend.to_lowercase())
+        .bind(friend.to_lowercase())
+        .bind(ckey.to_lowercase())
+        .fetch_optional(&mut *connection) // connection.acquire()'a gerek yok, direkt pool kullanabilirsin
+        .await?;
+
+    if friendship.is_none() && !player_exists(friend, &mut connection).await && !player_exists(ckey, &mut connection).await {
+        connection.close().await?;
+        return Err(Error::PlayerNotFound);
+    }
+
+    connection.close().await?;
+
+    Ok(friendship)
+}
+
+
+pub async fn add_friend(
+    ckey: &str,
+    friend: &str,
+    pool: &MySqlPool,
+    config: &Config,
+) -> Result<Option<Friendship>, Error> {
+    let mut connection = pool.acquire().await?;
+
+    if !player_exists(friend, &mut connection).await && !player_exists(ckey, &mut connection).await {
+        connection.close().await?;
+        return Err(Error::PlayerNotFound);
+    }
+
+    let sql = format!(
+        "INSERT INTO {}.friendship (user_ckey, friend_ckey) VALUES (?, ?) ON DUPLICATE KEY UPDATE 
+            user_ckey = IF(status = 'accepted', user_ckey, VALUES(user_ckey)),
+            friend_ckey = IF(status = 'accepted', friend_ckey, VALUES(friend_ckey)),
+            status = IF(status = 'accepted', 'accepted', 'pending')",
+        config.database.api_database
+    );
+    let result = sqlx::query(&sql)
+        .bind(ckey.to_lowercase())
+        .bind(friend.to_lowercase())
+        .execute(&mut *connection)
+        .await?;
+
+    if result.rows_affected() > 0 {
+        let sql = format!(
+            "SELECT * FROM {}.friendship WHERE LOWER(user_ckey) = ? AND LOWER(friend_ckey) = ?",
+            config.database.api_database
+        );
+        let updated_row = sqlx::query_as::<_, Friendship>(&sql)
+            .bind(ckey.to_lowercase())
+            .bind(friend.to_lowercase())
+            .fetch_one(&mut *connection)
+            .await?;
+
+        connection.close().await?;
+        return Ok(Some(updated_row));
+    }
+
+    connection.close().await?;
+    Ok(None)
+
+}
+
+pub async fn remove_friend(
+    ckey: &str,
+    friendship_id: i32,
+    pool: &MySqlPool,
+    config: &Config,
+) -> Result<Option<Friendship>, Error> {
+    let mut connection = pool.acquire().await?;
+
+    if !player_exists(ckey, &mut connection).await {
+        connection.close().await?;
+        return Err(Error::PlayerNotFound);
+    }
+
+    let sql = format!(
+        "UPDATE {}.friendship SET status = 'removed' WHERE id = ? AND (LOWER(user_ckey) = ? OR LOWER(friend_ckey) = ?) AND status = 'accepted'",
+        config.database.api_database
+    );
+    let result = sqlx::query(&sql)
+        .bind(friendship_id)
+        .bind(ckey.to_lowercase())
+        .bind(ckey.to_lowercase())
+        .execute(&mut *connection)
+        .await?;
+
+    if result.rows_affected() > 0 {
+        let sql = format!(
+            "SELECT * FROM {}.friendship WHERE id = ?",
+            config.database.api_database
+        );
+        let updated_row = sqlx::query_as::<_, Friendship>(&sql)
+            .bind(friendship_id)
+            .fetch_one(&mut *connection)
+            .await?;
+
+        connection.close().await?;
+        return Ok(Some(updated_row));
+    }
+
+    connection.close().await?;
+    Ok(None)
+}
+
+pub async fn accept_friend(
+    ckey: &str,
+    friendship_id: i32,
+    pool: &MySqlPool,
+    config: &Config,
+) -> Result<Option<Friendship>, Error> {
+    let mut connection = pool.acquire().await?;
+
+    if !player_exists(ckey, &mut connection).await {
+        connection.close().await?;
+        return Err(Error::PlayerNotFound);
+    }
+
+    let sql = format!(
+        "UPDATE {}.friendship SET status = 'accepted' WHERE id = ? AND LOWER(friend_ckey) = ? AND status = 'pending'",
+        config.database.api_database
+    );
+    let result = sqlx::query(&sql)
+        .bind(friendship_id)
+        .bind(ckey.to_lowercase())
+        .execute(&mut *connection)
+        .await?;
+
+    if result.rows_affected() > 0 {
+        let sql = format!(
+            "SELECT * FROM {}.friendship WHERE id = ?",
+            config.database.api_database
+        );
+        let updated_row = sqlx::query_as::<_, Friendship>(&sql)
+            .bind(friendship_id)
+            .fetch_one(&mut *connection)
+            .await?;
+        connection.close().await?;
+        return Ok(Some(updated_row));
+    }
+
+    connection.close().await?;
+    Ok(None)
+}
+
+pub async fn decline_friend(
+    ckey: &str,
+    friendship_id: i32,
+    pool: &MySqlPool,
+    config: &Config,
+) -> Result<Option<Friendship>, Error> {
+    let mut connection = pool.acquire().await?;
+
+    if !player_exists(ckey, &mut connection).await {
+        connection.close().await?;
+        return Err(Error::PlayerNotFound);
+    }
+
+    let sql = format!(
+        "UPDATE {}.friendship SET status = 'declined' WHERE id = ? AND (LOWER(user_ckey) = ? OR LOWER(friend_ckey) = ?) AND status = 'pending'",
+        config.database.api_database
+    );
+
+    let result = sqlx::query(&sql)
+        .bind(friendship_id)
+        .bind(ckey.to_lowercase())
+        .bind(ckey.to_lowercase())
+        .execute(&mut *connection)
+        .await?;
+
+    if result.rows_affected() > 0 {
+        let sql = format!(
+            "SELECT * FROM {}.friendship WHERE id = ?",
+            config.database.api_database
+        );
+        let updated_row = sqlx::query_as::<_, Friendship>(&sql)
+            .bind(friendship_id)
+            .fetch_one(&mut *connection)
+            .await?;
+        connection.close().await?;
+        return Ok(Some(updated_row));
+    }
+
+    connection.close().await?;
+    Ok(None)
 }
 
 pub async fn hide_ckey(
