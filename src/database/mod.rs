@@ -33,6 +33,7 @@ impl From<Error> for PlainText<String> {
 }
 
 async fn player_exists(ckey: &str, connection: &mut PoolConnection<MySql>) -> Result<bool> {
-    let query = sqlx::query("SELECT 1 FROM player WHERE LOWER(ckey) = ?").bind(ckey.to_lowercase());
+    let query =
+        sqlx::query("SELECT 1 FROM player WHERE LOWER(ckey) = ? LIMIT 1").bind(ckey.to_lowercase());
     Ok(connection.fetch_optional(query).await?.is_some())
 }

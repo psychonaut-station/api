@@ -50,7 +50,7 @@ pub async fn get_player(ckey: &str, pool: &MySqlPool) -> Result<Player> {
     let mut connection = pool.acquire().await?;
 
     let query = sqlx::query(
-        "SELECT ckey, byond_key, firstseen, firstseen_round_id, lastseen, lastseen_round_id, INET_NTOA(ip), computerid, accountjoindate FROM player WHERE LOWER(ckey) = ?"
+        "SELECT ckey, byond_key, firstseen, firstseen_round_id, lastseen, lastseen_round_id, INET_NTOA(ip), computerid, accountjoindate FROM player WHERE LOWER(ckey) = ? LIMIT 1"
     )
     .bind(ckey.to_lowercase());
 
