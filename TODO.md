@@ -1,0 +1,32 @@
+**Endpoints to implement:**
+
+- [x] /recent-test-merges.json
+- [ ] /v2/patreon?ckey
+- [ ] /v2/patreon/patrons
+- [x] /v2/player?ckey
+- [x] /v2/player/ban?ckey&permanent&since
+- [x] /v2/player/characters?ckey
+- [x] /v2/player/roletime?ckey
+- [x] /v2/player/roletime/top?job
+- [x] /v2/player/activity?ckey
+- [ ] /v2/player/discord?ckey&discord_id
+- [x] /v2/player/achievements?ckey&achievement_type
+- [x] /v2/player/lookup?ckey&ip&cid
+- [ ] /v2/round?round_id
+- [ ] /v2/rounds?fetch_size&page&round_id
+- [x] /v2/server
+- [ ] /v2/verify (POST, data)
+- [ ] /v2/unverify (POST, data)
+- [ ] /v2/discord/user?discord_id
+- [ ] /v2/discord/member?discord_id
+- [ ] /v2/byond/member?ckey
+- [ ] /v2/autocomplete/job?job
+- [ ] /v2/autocomplete/ckey?ckey
+- [ ] /v2/autocomplete/ic_name?ic_name
+- [ ] /v2/autocomplete/ckey/hide?ckey&hid_by (POST)
+- [ ] /v2/autocomplete/ckey/unhide?ckey&unhid_by (POST)
+- [ ] /v2/events/overview?limit
+- [ ] /v2/events/death?fetch_size&page
+- [ ] /v2/events/citations?fetch_size&page
+- [ ] /v2/events/crimes?fetch_size&page
+- [ ] /v2/ban?id
