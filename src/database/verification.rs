@@ -1,3 +1,8 @@
+//! Discord verification and Patreon status queries.
+//!
+//! Handles queries related to Discord account linking and Patreon supporter verification.
+//! Integrates with the Discord API to check roles and membership.
+
 use futures::TryStreamExt as _;
 use sqlx::{MySqlPool, Row as _};
 
@@ -11,6 +16,19 @@ use crate::{
 
 use super::Result;
 
+/// Retrieves all patron ckeys from Discord and matches them with linked accounts.
+///
+/// Queries Discord API for members with the patreon role, then looks up their
+/// linked ckeys in the database.
+///
+/// # Arguments
+///
+/// * `pool` - Database connection pool
+/// * `config` - Application configuration containing Discord credentials
+///
+/// # Returns
+///
+/// A list of ckeys belonging to verified patrons
 pub async fn get_patrons(pool: &MySqlPool, config: &Config) -> Result<Vec<String>> {
     let query = format!(
         r#"{{"or_query":{{}},"and_query":{{"role_ids":{{"and_query":["{}"]}}}},"limit":1000}}"#,
@@ -45,6 +63,20 @@ pub async fn get_patrons(pool: &MySqlPool, config: &Config) -> Result<Vec<String
     Ok(ckeys)
 }
 
+/// Checks if a player is a patron by verifying their Discord role.
+///
+/// Looks up the player's linked Discord account and checks if they have
+/// the patreon role on the Discord server.
+///
+/// # Arguments
+///
+/// * `ckey` - Player's ckey to check
+/// * `pool` - Database connection pool
+/// * `config` - Application configuration containing Discord credentials
+///
+/// # Returns
+///
+/// `true` if the player is a patron, `false` otherwise
 pub async fn is_patron(ckey: &str, pool: &MySqlPool, config: &Config) -> Result<bool> {
     let Some(id) = discord_id_from_ckey(ckey, pool).await? else {
         return Ok(false);
@@ -64,6 +96,16 @@ pub async fn is_patron(ckey: &str, pool: &MySqlPool, config: &Config) -> Result<
     }
 }
 
+/// Retrieves a player's linked Discord ID from the database.
+///
+/// # Arguments
+///
+/// * `ckey` - Player's ckey (case-insensitive)
+/// * `pool` - Database connection pool
+///
+/// # Returns
+///
+/// `Some(discord_id)` if the player has a valid link, `None` otherwise
 pub async fn discord_id_from_ckey(ckey: &str, pool: &MySqlPool) -> Result<Option<i64>> {
     let query = sqlx::query(
         "SELECT discord_id FROM discord_links WHERE LOWER(ckey) = ? AND valid = 1 LIMIT 1",

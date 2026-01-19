@@ -1,3 +1,7 @@
+//! Test merge tracking queries.
+//!
+//! Retrieves information about recent test merged pull requests from the feedback table.
+
 use futures::TryStreamExt as _;
 use poem_openapi::Object;
 use sqlx::{FromRow, MySqlPool, Row as _, mysql::MySqlRow};
@@ -6,6 +10,7 @@ use crate::sqlxext::DateTime;
 
 use super::Result;
 
+/// Represents a test merge entry.
 #[derive(Object, Clone)]
 pub struct TestMerge {
     /// The round ID of the test merge
@@ -33,6 +38,18 @@ impl FromRow<'_, MySqlRow> for TestMerge {
     }
 }
 
+/// Retrieves the most recent test merges from the feedback table.
+///
+/// Returns up to 200 of the most recent rounds that had test merged PRs,
+/// along with the PR numbers that were merged.
+///
+/// # Arguments
+///
+/// * `pool` - Database connection pool
+///
+/// # Returns
+///
+/// A list of test merges ordered by round ID (most recent first)
 pub async fn get_recent_test_merges(pool: &MySqlPool) -> Result<Vec<TestMerge>> {
     let query = sqlx::query_as(
         "SELECT round_id, datetime, JSON_ARRAYAGG(DISTINCT jt.number) AS test_merges FROM feedback JOIN JSON_TABLE(json, '$.data.*' COLUMNS(number INT PATH '$.number')) jt WHERE key_name = 'testmerged_prs' GROUP BY round_id, datetime ORDER BY round_id DESC LIMIT 200",

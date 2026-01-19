@@ -1,3 +1,8 @@
+//! SQLx extensions and custom type mappings.
+//!
+//! Provides custom wrapper types for MySQL DATE and DATETIME columns that
+//! automatically convert to formatted strings when returned from queries.
+
 use sqlx::{
     Decode, MySql, Type,
     error::BoxDynError,
@@ -5,6 +10,10 @@ use sqlx::{
     types::chrono::{NaiveDate, NaiveDateTime},
 };
 
+/// Wrapper for MySQL DATETIME type that automatically formats to string.
+///
+/// This type implements SQLx's `Type` and `Decode` traits to handle MySQL DATETIME columns,
+/// and provides automatic conversion to a formatted string in the format "YYYY-MM-DD HH:MM:SS".
 pub struct DateTime(NaiveDateTime);
 
 impl Type<MySql> for DateTime {
@@ -27,6 +36,10 @@ impl From<DateTime> for String {
     }
 }
 
+/// Wrapper for MySQL DATE type that automatically formats to string.
+///
+/// This type implements SQLx's `Type` and `Decode` traits to handle MySQL DATE columns,
+/// and provides automatic conversion to a formatted string in the format "YYYY-MM-DD".
 pub struct Date(NaiveDate);
 
 impl Type<MySql> for Date {

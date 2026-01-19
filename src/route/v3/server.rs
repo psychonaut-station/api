@@ -1,3 +1,7 @@
+//! Server status API endpoint.
+//!
+//! Provides an endpoint for querying the status of all configured game servers.
+
 use poem::web::Data;
 use poem_openapi::{ApiResponse, Object, OpenApi, Union, payload::Json};
 use tracing::error;

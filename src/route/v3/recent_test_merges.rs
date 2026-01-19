@@ -1,3 +1,7 @@
+//! Test merge API endpoint.
+//!
+//! Provides an endpoint for retrieving recent test merged pull requests.
+
 use poem::web::Data;
 use poem_openapi::{
     ApiResponse, OpenApi,

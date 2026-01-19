@@ -1,10 +1,16 @@
+//! BYOND server communication module.
+//!
+//! Implements the BYOND topic protocol for communicating with BYOND game servers.
+
 pub mod status;
 mod topic;
 
 pub use status::status;
 
+/// Result type for BYOND operations.
 type Result<T> = std::result::Result<T, Error>;
 
+/// Errors that can occur during BYOND server communication.
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("BYOND topic timeout: {0}")]

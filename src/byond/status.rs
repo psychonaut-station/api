@@ -1,3 +1,8 @@
+//! BYOND server status parsing and types.
+//!
+//! Parses server status responses from BYOND topic queries
+//! and provides structured types.
+
 use std::{net::SocketAddr, str::FromStr};
 
 use poem_openapi::Enum;
@@ -7,6 +12,25 @@ use super::{
     topic::{Response, topic},
 };
 
+/// Queries a BYOND server for its current status.
+///
+/// Sends a "?status" topic query to the specified server address and parses
+/// the response into a structured `Status` object.
+///
+/// # Arguments
+///
+/// * `address` - Socket address of the BYOND server
+///
+/// # Returns
+///
+/// A `Status` object containing current server information
+///
+/// # Errors
+///
+/// Returns an error if:
+/// - Connection fails or times out
+/// - Response is invalid or cannot be parsed
+/// - Server returns an unexpected response type
 pub async fn status(address: SocketAddr) -> Result<Status> {
     match topic(address, "?status").await? {
         Response::String(response) => {
@@ -27,7 +51,7 @@ pub async fn status(address: SocketAddr) -> Result<Status> {
                     "round_id" => status.round_id = value.parse()?,
                     "players" => status.players = value.parse()?,
                     "revision" => status.revision = value.to_string(),
-                    "revision_date" => status.revision_data = value.to_string(),
+                    "revision_date" => status.revision_date = value.to_string(),
                     "hub" => status.hub = value == "1",
                     "identifier" => status.identifier = value == "1",
                     "admins" => status.admins = value.parse()?,
@@ -61,7 +85,8 @@ pub async fn status(address: SocketAddr) -> Result<Status> {
     }
 }
 
-#[derive(Default, Enum, Clone)]
+/// Represents the current state of the game round.
+#[derive(Default, Enum, Clone, Debug)]
 #[oai(rename_all = "lowercase")]
 pub enum GameState {
     #[default]
@@ -87,7 +112,8 @@ impl FromStr for GameState {
     }
 }
 
-#[derive(Default, Enum, Clone)]
+/// Represents the station's security alert level.
+#[derive(Default, Enum, Clone, Debug)]
 #[oai(rename_all = "lowercase")]
 pub enum SecurityLevel {
     #[default]
@@ -111,7 +137,8 @@ impl FromStr for SecurityLevel {
     }
 }
 
-#[derive(Default, Enum)]
+/// Represents the current mode of the emergency shuttle.
+#[derive(Default, Enum, Debug)]
 #[oai(rename_all = "lowercase")]
 pub enum ShuttleMode {
     #[default]
@@ -150,35 +177,65 @@ impl FromStr for ShuttleMode {
     }
 }
 
-#[derive(Default)]
+/// Complete status information for a BYOND game server.
+#[derive(Default, Debug)]
 pub struct Status {
+    /// Game version (e.g., "/tg/Station 13")
     pub version: String,
+    /// Whether respawning is enabled
     pub respawn: bool,
+    /// Whether new players can join the round
     pub enter: bool,
+    /// Whether AI slot is available
     pub ai: bool,
+    /// Name of the server host
     pub host: String,
+    /// Current round ID
     pub round_id: u32,
+    /// Number of connected players
     pub players: u32,
+    /// Git revision hash
     pub revision: String,
-    pub revision_data: String,
+    /// Revision date
+    pub revision_date: String,
+    /// Whether server is visible on BYOND hub
     pub hub: bool,
+    /// Short form server name used for its database
     pub identifier: bool,
+    /// Number of online admins
     pub admins: u32,
+    /// Current game state
     pub gamestate: GameState,
+    /// Current map name
     pub map_name: String,
+    /// Current security alert level
     pub security_level: SecurityLevel,
+    /// Round duration in deciseconds
     pub round_duration: u32,
+    /// Current time dilation (server performance)
     pub time_dilation_current: f32,
+    /// Average time dilation
     pub time_dilation_avg: f32,
+    /// Slow average time dilation
     pub time_dilation_avg_slow: f32,
+    /// Fast average time dilation
     pub time_dilation_avg_fast: f32,
+    /// Soft population cap threshold
     pub soft_popcap: u32,
+    /// Hard population cap threshold
     pub hard_popcap: u32,
+    /// Extreme population cap threshold
     pub extreme_popcap: u32,
+    /// Whether population cap is active
     pub popcap: bool,
+    /// Whether server is in bunkered mode
     pub bunkered: bool,
+    /// Whether interviews are required for new players
     pub interviews: bool,
+    /// Current shuttle mode
     pub shuttle_mode: ShuttleMode,
+    /// Shuttle timer in seconds
     pub shuttle_timer: u32,
+    /// Public connection address
     pub public_address: String,
 }

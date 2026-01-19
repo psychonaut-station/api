@@ -1,3 +1,8 @@
+//! Psychonaut Station API Server
+//!
+//! This is the main API server for Psychonaut Station, providing REST endpoints
+//! for our website, Discord bot, and other services.
+
 mod byond;
 mod cache;
 mod config;
@@ -19,6 +24,10 @@ use crate::{
     config::{Config, DatabaseConfig},
 };
 
+/// Main entry point for the API server.
+///
+/// Initializes error handling, logging, configuration, and starts the HTTP server.
+/// The server listens on the address and port specified in the configuration file.
 #[tokio::main]
 async fn main() -> color_eyre::Result<()> {
     color_eyre::install()?;
@@ -40,6 +49,15 @@ async fn main() -> color_eyre::Result<()> {
     Ok(())
 }
 
+/// Creates a connection pool with the specified configuration.
+///
+/// # Arguments
+///
+/// * `config` - Database configuration containing connection details
+///
+/// # Returns
+///
+/// A configured MySQL connection pool with desired settings
 fn pool(config: &DatabaseConfig) -> MySqlPool {
     let connect_options = MySqlConnectOptions::new()
         .username(&config.user)

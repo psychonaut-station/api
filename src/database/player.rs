@@ -1,3 +1,7 @@
+//! Player information queries.
+//!
+//! Handles queries for player data.
+
 use const_format::formatcp as const_format;
 use poem_openapi::{Enum, Object};
 use sqlx::{FromRow, MySqlPool, Row as _, mysql::MySqlRow};
@@ -6,6 +10,7 @@ use crate::sqlxext::{Date, DateTime};
 
 use super::{Error, Result, player_exists};
 
+/// Represents a player's basic information.
 #[derive(Object)]
 pub struct Player {
     /// The player's ckey
@@ -43,6 +48,20 @@ impl FromRow<'_, MySqlRow> for Player {
     }
 }
 
+/// Retrieves a player's basic information from the database.
+///
+/// # Arguments
+///
+/// * `ckey` - Player's ckey (case-insensitive)
+/// * `pool` - Database connection pool
+///
+/// # Returns
+///
+/// The player's information
+///
+/// # Errors
+///
+/// Returns `Error::PlayerNotFound` if the player doesn't exist
 pub async fn get_player(ckey: &str, pool: &MySqlPool) -> Result<Player> {
     let query = sqlx::query_as(
         "SELECT ckey, byond_key, firstseen, firstseen_round_id, lastseen, lastseen_round_id, INET_NTOA(ip), computerid, accountjoindate FROM player WHERE LOWER(ckey) = ? LIMIT 1"
@@ -54,6 +73,7 @@ pub async fn get_player(ckey: &str, pool: &MySqlPool) -> Result<Player> {
     player.ok_or(Error::PlayerNotFound)
 }
 
+/// Represents an achievement in the game.
 #[derive(Object)]
 pub struct Achievement {
     /// The unique key of the achievement
@@ -91,6 +111,7 @@ impl FromRow<'_, MySqlRow> for Achievement {
     }
 }
 
+/// Possible types of achievements.
 #[derive(Enum)]
 #[oai(rename_all = "lowercase")]
 pub enum AchievementType {
@@ -112,6 +133,21 @@ impl From<String> for AchievementType {
     }
 }
 
+/// Retrieves all achievements for a player, optionally filtered by type.
+///
+/// # Arguments
+///
+/// * `ckey` - Player's ckey (case-insensitive)
+/// * `achievement_type` - Optional filter for achievement type ("achievement", "score", etc.)
+/// * `pool` - Database connection pool
+///
+/// # Returns
+///
+/// A list of achievements, ordered by most recent first
+///
+/// # Errors
+///
+/// Returns `Error::PlayerNotFound` if the player doesn't exist
 pub async fn get_player_achievements(
     ckey: &str,
     achievement_type: &Option<String>,
@@ -140,6 +176,7 @@ pub async fn get_player_achievements(
     Ok(achievements)
 }
 
+/// Represents a ban record for a player.
 #[derive(Object)]
 pub struct Ban {
     /// The time the ban was issued in YYYY-MM-DD HH:MM:SS format
@@ -188,6 +225,22 @@ impl FromRow<'_, MySqlRow> for Ban {
     }
 }
 
+/// Retrieves all bans for a player with optional filters.
+///
+/// # Arguments
+///
+/// * `ckey` - Player's ckey (case-insensitive)
+/// * `permanent` - If true, only return permanent bans (no expiration time)
+/// * `since` - Optional date filter to only return bans issued after this date
+/// * `pool` - Database connection pool
+///
+/// # Returns
+///
+/// A list of bans grouped by ban time
+///
+/// # Errors
+///
+/// Returns `Error::PlayerNotFound` if the player doesn't exist
 pub async fn get_player_bans(
     ckey: &str,
     permanent: bool,
@@ -221,6 +274,7 @@ pub async fn get_player_bans(
     Ok(bans)
 }
 
+/// Represents a character used by a player.
 #[derive(Object)]
 pub struct Character {
     /// The name of the character
@@ -238,8 +292,23 @@ impl FromRow<'_, MySqlRow> for Character {
     }
 }
 
+/// Retrieves a player's most frequently used characters.
+///
+/// # Arguments
+///
+/// * `ckey` - Player's ckey (case-insensitive)
+/// * `pool` - Database connection pool
+///
+/// # Returns
+///
+/// A list of characters ordered by frequency of use (excluding certain special roles)
+///
+/// # Errors
+///
+/// Returns `Error::PlayerNotFound` if the player doesn't exist
 pub async fn get_player_characters(ckey: &str, pool: &MySqlPool) -> Result<Vec<Character>> {
-    const EXCLUDED_ROLES: &str = "('Operative', 'Wizard')";
+    // Special roles misleadingly counted as characters, exclude them
+    const EXCLUDED_ROLES: &str = "('Cargorilla')";
 
     let sql = const_format!(
         "SELECT character_name, COUNT(*) AS times FROM manifest WHERE ckey = ? AND special NOT IN {EXCLUDED_ROLES} GROUP BY character_name ORDER BY times DESC"
@@ -256,6 +325,7 @@ pub async fn get_player_characters(ckey: &str, pool: &MySqlPool) -> Result<Vec<C
     Ok(characters)
 }
 
+/// Represents a player's daily activity.
 #[derive(Object)]
 pub struct Activity {
     /// The date of the activity in YYYY-MM-DD format
@@ -273,6 +343,20 @@ impl FromRow<'_, MySqlRow> for Activity {
     }
 }
 
+/// Retrieves a player's activity over the last 180 days.
+///
+/// # Arguments
+///
+/// * `ckey` - Player's ckey (case-insensitive)
+/// * `pool` - Database connection pool
+///
+/// # Returns
+///
+/// A list of daily activity records showing rounds played per day
+///
+/// # Errors
+///
+/// Returns `Error::PlayerNotFound` if the player doesn't exist
 pub async fn get_player_activity(ckey: &str, pool: &MySqlPool) -> Result<Vec<Activity>> {
     let query = sqlx::query_as(
         "SELECT DATE(datetime) AS date, COUNT(DISTINCT round_id) AS rounds FROM connection_log WHERE ckey = ? AND datetime >= DATE_SUB(CURDATE(), INTERVAL 180 DAY) GROUP BY date;"

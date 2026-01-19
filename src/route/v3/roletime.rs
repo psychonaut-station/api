@@ -1,3 +1,7 @@
+//! Role time API endpoints.
+//!
+//! Provides endpoints for querying player role times and job leaderboards.
+
 use poem::web::Data;
 use poem_openapi::{
     ApiResponse, OpenApi,
@@ -75,6 +79,7 @@ enum RoletimeTopResponse {
     /// Returns when top players successfully retrieved
     #[oai(status = 200)]
     Success(Json<Vec<JobRoletime>>),
+    /// Returns when an internal error occurs
     #[oai(status = 500)]
     InternalError(PlainText<String>),
 }

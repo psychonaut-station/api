@@ -1,3 +1,8 @@
+//! Connection lookup API endpoints.
+//!
+//! Provides REST endpoints for looking up related connections by computer ID,
+//! IP address, or player ckey.
+
 use poem::web::Data;
 use poem_openapi::{
     ApiResponse, OpenApi,

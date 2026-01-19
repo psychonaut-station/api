@@ -1,3 +1,7 @@
+//! Database access layer.
+//!
+//! Provides various functions for querying the database.
+
 mod lookup;
 mod player;
 mod recent_test_merges;
@@ -13,8 +17,10 @@ pub use verification::*;
 use poem_openapi::payload::PlainText;
 use sqlx::{Executor, MySql};
 
+/// Result type for database operations.
 type Result<T> = std::result::Result<T, Error>;
 
+/// Errors that can occur during database operations.
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("internal database error")]
@@ -38,6 +44,16 @@ impl From<Error> for PlainText<String> {
     }
 }
 
+/// Checks if a player exists in the database.
+///
+/// # Arguments
+///
+/// * `ckey` - Player's ckey (case-insensitive)
+/// * `executor` - Database executor or connection
+///
+/// # Returns
+///
+/// `true` if the player exists, `false` otherwise
 async fn player_exists(ckey: &str, executor: impl Executor<'_, Database = MySql>) -> Result<bool> {
     let query =
         sqlx::query("SELECT 1 FROM player WHERE LOWER(ckey) = ? LIMIT 1").bind(ckey.to_lowercase());

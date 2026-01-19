@@ -1,3 +1,8 @@
+//! Patreon integration API endpoints.
+//!
+//! Provides endpoints for checking Patreon supporter status and retrieving
+//! the list of all supporters.
+
 use poem::web::Data;
 use poem_openapi::{
     ApiResponse, OpenApi,

@@ -1,3 +1,7 @@
+//! Player information API endpoints.
+//!
+//! Provides REST endpoints for querying data about players.
+
 use poem::web::Data;
 use poem_openapi::{
     ApiResponse, OpenApi,
