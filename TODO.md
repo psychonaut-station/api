@@ -30,3 +30,4 @@
 - [ ] /v2/events/citations?fetch_size&page
 - [ ] /v2/events/crimes?fetch_size&page
 - [ ] /v2/ban?id
+- [ ] [#14](https://github.com/psychonaut-station/api/pull/14)
