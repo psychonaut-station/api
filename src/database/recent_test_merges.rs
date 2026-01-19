@@ -32,7 +32,7 @@ impl FromRow<'_, MySqlRow> for TestMerge {
         })?;
         Ok(TestMerge {
             round_id: row.try_get("round_id")?,
-            datetime: row.try_get::<DateTime, _>("datetime")?.into(),
+            datetime: row.try_get::<DateTime, _>("datetime")?.to_string(),
             test_merges,
         })
     }

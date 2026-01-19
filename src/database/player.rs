@@ -37,13 +37,13 @@ impl FromRow<'_, MySqlRow> for Player {
         Ok(Player {
             ckey: row.try_get("ckey")?,
             byond_key: row.try_get("byond_key")?,
-            first_seen: row.try_get::<DateTime, _>("firstseen")?.into(),
-            last_seen: row.try_get::<DateTime, _>("lastseen")?.into(),
+            first_seen: row.try_get::<DateTime, _>("firstseen")?.to_string(),
+            last_seen: row.try_get::<DateTime, _>("lastseen")?.to_string(),
             first_seen_round: row.try_get("firstseen_round_id")?,
             last_seen_round: row.try_get("lastseen_round_id")?,
             byond_age: row
                 .try_get::<Option<Date>, _>("accountjoindate")?
-                .map(Into::into),
+                .map(|d| d.to_string()),
         })
     }
 }
@@ -106,7 +106,7 @@ impl FromRow<'_, MySqlRow> for Achievement {
             achievement_name: row.try_get("achievement_name")?,
             achievement_description: row.try_get("achievement_description")?,
             value: row.try_get("value")?,
-            timestamp: row.try_get::<DateTime, _>("last_updated")?.into(),
+            timestamp: row.try_get::<DateTime, _>("last_updated")?.to_string(),
         })
     }
 }
@@ -207,19 +207,19 @@ pub struct Ban {
 impl FromRow<'_, MySqlRow> for Ban {
     fn from_row(row: &MySqlRow) -> sqlx::Result<Self> {
         Ok(Ban {
-            bantime: row.try_get::<DateTime, _>("bantime")?.into(),
+            bantime: row.try_get::<DateTime, _>("bantime")?.to_string(),
             round_id: row.try_get("round_id")?,
             roles: row.try_get("roles")?,
             expiration_time: row
                 .try_get::<Option<DateTime>, _>("expiration_time")?
-                .map(Into::into),
+                .map(|d| d.to_string()),
             reason: row.try_get("reason")?,
             ckey: row.try_get("ckey")?,
             a_ckey: row.try_get("a_ckey")?,
             edits: row.try_get("edits")?,
             unbanned_datetime: row
                 .try_get::<Option<DateTime>, _>("unbanned_datetime")?
-                .map(Into::into),
+                .map(|d| d.to_string()),
             unbanned_ckey: row.try_get("unbanned_ckey")?,
         })
     }
@@ -337,7 +337,7 @@ pub struct Activity {
 impl FromRow<'_, MySqlRow> for Activity {
     fn from_row(row: &MySqlRow) -> sqlx::Result<Self> {
         Ok(Activity {
-            date: row.try_get::<Date, _>("date")?.into(),
+            date: row.try_get::<Date, _>("date")?.to_string(),
             rounds: row.try_get("rounds")?,
         })
     }

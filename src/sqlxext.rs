@@ -3,6 +3,8 @@
 //! Provides custom wrapper types for MySQL DATE and DATETIME columns that
 //! automatically convert to formatted strings when returned from queries.
 
+use std::fmt::{self, Display, Formatter};
+
 use sqlx::{
     Decode, MySql, Type,
     error::BoxDynError,
@@ -28,11 +30,11 @@ impl<'r> Decode<'r, MySql> for DateTime {
     }
 }
 
-impl From<DateTime> for String {
-    fn from(val: DateTime) -> Self {
+impl Display for DateTime {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         const DATETIME_FORMAT: &str = "%Y-%m-%d %H:%M:%S";
 
-        val.0.format(DATETIME_FORMAT).to_string()
+        write!(f, "{}", self.0.format(DATETIME_FORMAT))
     }
 }
 
@@ -54,10 +56,10 @@ impl<'r> Decode<'r, MySql> for Date {
     }
 }
 
-impl From<Date> for String {
-    fn from(val: Date) -> Self {
+impl Display for Date {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         const DATE_FORMAT: &str = "%Y-%m-%d";
 
-        val.0.format(DATE_FORMAT).to_string()
+        write!(f, "{}", self.0.format(DATE_FORMAT))
     }
 }
