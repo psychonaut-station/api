@@ -26,3 +26,27 @@ CREATE TABLE `hid_ckeys_autocomplete` (
 	PRIMARY KEY (`id`)
 ) COLLATE='utf8mb4_general_ci' ENGINE=InnoDB;
 /*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Table structure for table `friendship`
+--
+DROP TABLE IF EXISTS `friendship`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `friendship` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `user_ckey` VARCHAR(32) NOT NULL,
+  `friend_ckey` VARCHAR(32) NOT NULL,
+  `status` enum('pending','accepted','declined','removed') NOT NULL DEFAULT 'pending',
+  `created_at` datetime DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  `unique_pair` VARCHAR(65) AS (
+    IF(user_ckey < friend_ckey, 
+       CONCAT(user_ckey, ':', friend_ckey), 
+       CONCAT(friend_ckey, ':', user_ckey))
+  ) VIRTUAL,
+  PRIMARY KEY (`id`),
+  UNIQUE INDEX `unique_constraints` (`unique_pair`),
+  CHECK (user_ckey <> friend_ckey)
+) COLLATE='utf8mb4_general_ci' ENGINE=InnoDB;
+/*!40101 SET character_set_client = @saved_cs_client */;
