@@ -8,7 +8,9 @@
     <script src="https://unpkg.com/@stoplight/elements/web-components.min.js"></script>
     <link rel="stylesheet" href="https://unpkg.com/@stoplight/elements/styles.min.css" />
     <style>
-      :root { background-color: white; } #docs { display: block; height: 100vh; }
+      :root { background-color: white; }
+      #docs { display: block; height: 100vh; }
+      [data-test="schema-row"]:has([data-test^="property-name"]):not(:has([data-test="property-required"])) { [data-test="property-type"]::after { content: ' | null'; } }
     </style>
   </head>
   <body>
