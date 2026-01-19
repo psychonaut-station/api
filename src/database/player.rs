@@ -10,25 +10,25 @@ use crate::sqlxext::{Date, DateTime};
 
 use super::{Error, Result, ban::Ban, player_exists};
 
-/// Represents a player's basic information.
+/// An object representing a player's basic information.
 #[derive(Object)]
 pub struct Player {
-    /// The player's ckey
+    /// The player's ckey.
     pub ckey: String,
-    /// The player's BYOND key, if available
+    /// The player's BYOND key, if available.
     pub byond_key: Option<String>,
     /// The date and time when the player first joined the game
-    /// in YYYY-MM-DD HH:MM:SS format
+    /// in YYYY-MM-DD HH:MM:SS format.
     pub first_seen: String,
     /// The date and time when the player was last seen
-    /// in YYYY-MM-DD HH:MM:SS format
+    /// in YYYY-MM-DD HH:MM:SS format.
     pub last_seen: String,
-    /// The round ID when the player first joined
+    /// The round ID when the player first joined.
     pub first_seen_round: Option<u32>,
-    /// The round ID when the player was last seen
+    /// The round ID when the player was last seen.
     pub last_seen_round: Option<u32>,
     /// The player's BYOND account age, if available
-    /// in YYYY-MM-DD format
+    /// in YYYY-MM-DD format.
     pub byond_age: Option<String>,
 }
 
@@ -52,16 +52,16 @@ impl FromRow<'_, MySqlRow> for Player {
 ///
 /// # Arguments
 ///
-/// * `ckey` - Player's ckey (case-insensitive)
-/// * `pool` - Database connection pool
+/// * `ckey` - Player's ckey (case-insensitive).
+/// * `pool` - Database connection pool.
 ///
 /// # Returns
 ///
-/// The player's information
+/// The player's information.
 ///
 /// # Errors
 ///
-/// Returns `Error::PlayerNotFound` if the player doesn't exist
+/// Returns `Error::PlayerNotFound` if the player doesn't exist.
 pub async fn get_player(ckey: &str, pool: &MySqlPool) -> Result<Player> {
     let query = sqlx::query_as(
         "SELECT ckey, byond_key, firstseen, firstseen_round_id, lastseen, lastseen_round_id, INET_NTOA(ip), computerid, accountjoindate FROM player WHERE LOWER(ckey) = ? LIMIT 1"
@@ -73,25 +73,25 @@ pub async fn get_player(ckey: &str, pool: &MySqlPool) -> Result<Player> {
     player.ok_or(Error::PlayerNotFound)
 }
 
-/// Represents an achievement in the game.
+/// An object representing an achievement in the game.
 #[derive(Object)]
 pub struct Achievement {
-    /// The unique key of the achievement
+    /// The unique key of the achievement.
     pub achievement_key: String,
-    /// The version of the achievement
+    /// The version of the achievement.
     pub achievement_version: u16,
-    /// The type of the achievement
+    /// The type of the achievement.
     pub achievement_type: Option<AchievementType>,
-    /// The name of the achievement
+    /// The name of the achievement.
     pub achievement_name: Option<String>,
-    /// The description of the achievement
+    /// The description of the achievement.
     pub achievement_description: Option<String>,
     /// If achievement type is Score, this is the score value such as the number of times Bubblegum has been killed;
-    /// If achievement type is Achievement, this is always 1
+    /// If achievement type is Achievement, this is always 1.
     pub value: Option<i32>,
     /// If achievement type is Score, this is the timestamp when the score was last updated;
     /// If achievement type is Achievement, this is the timestamp when the achievement was unlocked
-    /// both in YYYY-MM-DD HH:MM:SS format
+    /// both in YYYY-MM-DD HH:MM:SS format.
     pub timestamp: String,
 }
 
@@ -111,15 +111,15 @@ impl FromRow<'_, MySqlRow> for Achievement {
     }
 }
 
-/// Possible types of achievements.
+/// An enum representing possible types of achievements.
 #[derive(Enum)]
 #[oai(rename_all = "lowercase")]
 pub enum AchievementType {
-    /// Represents a simple achievement that can be unlocked
+    /// An achievement that can be unlocked.
     Achievement,
-    /// Represents a score-based achievement
+    /// A score-based achievement.
     Score,
-    /// Base abstract type for achievements
+    /// Base abstract type for achievements.
     Award,
 }
 
@@ -137,17 +137,17 @@ impl From<String> for AchievementType {
 ///
 /// # Arguments
 ///
-/// * `ckey` - Player's ckey (case-insensitive)
-/// * `achievement_type` - Optional filter for achievement type ("achievement", "score", etc.)
-/// * `pool` - Database connection pool
+/// * `ckey` - Player's ckey (case-insensitive).
+/// * `achievement_type` - Optional filter for achievement type ("achievement", "score", etc.).
+/// * `pool` - Database connection pool.
 ///
 /// # Returns
 ///
-/// A list of achievements, ordered by most recent first
+/// A list of achievements, ordered by most recent first.
 ///
 /// # Errors
 ///
-/// Returns `Error::PlayerNotFound` if the player doesn't exist
+/// Returns `Error::PlayerNotFound` if the player doesn't exist.
 pub async fn get_player_achievements(
     ckey: &str,
     achievement_type: &Option<String>,
@@ -180,18 +180,18 @@ pub async fn get_player_achievements(
 ///
 /// # Arguments
 ///
-/// * `ckey` - Player's ckey (case-insensitive)
-/// * `permanent` - If true, only return permanent bans (no expiration time)
-/// * `since` - Optional date filter to only return bans issued after this date
-/// * `pool` - Database connection pool
+/// * `ckey` - Player's ckey (case-insensitive).
+/// * `permanent` - If true, only return permanent bans (no expiration time).
+/// * `since` - Optional date filter to only return bans issued after this date.
+/// * `pool` - Database connection pool.
 ///
 /// # Returns
 ///
-/// A list of bans grouped by ban time
+/// A list of bans grouped by ban time.
 ///
 /// # Errors
 ///
-/// Returns `Error::PlayerNotFound` if the player doesn't exist
+/// Returns `Error::PlayerNotFound` if the player doesn't exist.
 pub async fn get_player_bans(
     ckey: &str,
     permanent: bool,
@@ -225,12 +225,12 @@ pub async fn get_player_bans(
     Ok(bans)
 }
 
-/// Represents a character used by a player.
+/// An object representing a character used by a player.
 #[derive(Object)]
 pub struct Character {
-    /// The name of the character
+    /// The name of the character.
     pub name: String,
-    /// The number of times this character has been played
+    /// The number of times this character has been played.
     pub occurrences: i64,
 }
 
@@ -247,16 +247,16 @@ impl FromRow<'_, MySqlRow> for Character {
 ///
 /// # Arguments
 ///
-/// * `ckey` - Player's ckey (case-insensitive)
-/// * `pool` - Database connection pool
+/// * `ckey` - Player's ckey (case-insensitive).
+/// * `pool` - Database connection pool.
 ///
 /// # Returns
 ///
-/// A list of characters ordered by frequency of use (excluding certain special roles)
+/// A list of characters ordered by frequency of use (excluding certain special roles).
 ///
 /// # Errors
 ///
-/// Returns `Error::PlayerNotFound` if the player doesn't exist
+/// Returns `Error::PlayerNotFound` if the player doesn't exist.
 pub async fn get_player_characters(ckey: &str, pool: &MySqlPool) -> Result<Vec<Character>> {
     // Special roles misleadingly counted as characters, exclude them
     const EXCLUDED_ROLES: &str = "('Cargorilla')";
@@ -276,12 +276,12 @@ pub async fn get_player_characters(ckey: &str, pool: &MySqlPool) -> Result<Vec<C
     Ok(characters)
 }
 
-/// Represents a player's daily activity.
+/// An object representing a player's daily activity.
 #[derive(Object)]
 pub struct Activity {
-    /// The date of the activity in YYYY-MM-DD format
+    /// The date of the activity in YYYY-MM-DD format.
     pub date: String,
-    /// The number of rounds played on that date
+    /// The number of rounds played on that date.
     pub rounds: i64,
 }
 
@@ -298,16 +298,16 @@ impl FromRow<'_, MySqlRow> for Activity {
 ///
 /// # Arguments
 ///
-/// * `ckey` - Player's ckey (case-insensitive)
-/// * `pool` - Database connection pool
+/// * `ckey` - Player's ckey (case-insensitive).
+/// * `pool` - Database connection pool.
 ///
 /// # Returns
 ///
-/// A list of daily activity records showing rounds played per day
+/// A list of daily activity records showing rounds played per day.
 ///
 /// # Errors
 ///
-/// Returns `Error::PlayerNotFound` if the player doesn't exist
+/// Returns `Error::PlayerNotFound` if the player doesn't exist.
 pub async fn get_player_activity(ckey: &str, pool: &MySqlPool) -> Result<Vec<Activity>> {
     let query = sqlx::query_as(
         "SELECT DATE(datetime) AS date, COUNT(DISTINCT round_id) AS rounds FROM connection_log WHERE ckey = ? AND datetime >= DATE_SUB(CURDATE(), INTERVAL 180 DAY) GROUP BY date;"

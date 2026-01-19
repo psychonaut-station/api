@@ -50,12 +50,12 @@ impl From<Error> for PlainText<String> {
 ///
 /// # Arguments
 ///
-/// * `ckey` - Player's ckey (case-insensitive)
-/// * `executor` - Database executor or connection
+/// * `ckey` - Player's ckey (case-insensitive).
+/// * `executor` - Database executor or connection.
 ///
 /// # Returns
 ///
-/// `true` if the player exists, `false` otherwise
+/// `true` if the player exists, `false` otherwise.
 async fn player_exists(ckey: &str, executor: impl Executor<'_, Database = MySql>) -> Result<bool> {
     let query =
         sqlx::query("SELECT 1 FROM player WHERE LOWER(ckey) = ? LIMIT 1").bind(ckey.to_lowercase());

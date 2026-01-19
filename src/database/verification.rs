@@ -23,12 +23,12 @@ use super::Result;
 ///
 /// # Arguments
 ///
-/// * `pool` - Database connection pool
-/// * `config` - Application configuration containing Discord credentials
+/// * `pool` - Database connection pool.
+/// * `config` - Application configuration containing Discord credentials.
 ///
 /// # Returns
 ///
-/// A list of ckeys belonging to verified patrons
+/// A list of ckeys belonging to verified patrons.
 pub async fn get_patrons(pool: &MySqlPool, config: &Config) -> Result<Vec<String>> {
     let query = format!(
         r#"{{"or_query":{{}},"and_query":{{"role_ids":{{"and_query":["{}"]}}}},"limit":1000}}"#,
@@ -70,13 +70,13 @@ pub async fn get_patrons(pool: &MySqlPool, config: &Config) -> Result<Vec<String
 ///
 /// # Arguments
 ///
-/// * `ckey` - Player's ckey to check
-/// * `pool` - Database connection pool
-/// * `config` - Application configuration containing Discord credentials
+/// * `ckey` - Player's ckey to check.
+/// * `pool` - Database connection pool.
+/// * `config` - Application configuration containing Discord credentials.
 ///
 /// # Returns
 ///
-/// `true` if the player is a patron, `false` otherwise
+/// `true` if the player is a patron, `false` otherwise.
 pub async fn is_patron(ckey: &str, pool: &MySqlPool, config: &Config) -> Result<bool> {
     let Some(id) = discord_id_from_ckey(ckey, pool).await? else {
         return Ok(false);
@@ -100,12 +100,12 @@ pub async fn is_patron(ckey: &str, pool: &MySqlPool, config: &Config) -> Result<
 ///
 /// # Arguments
 ///
-/// * `ckey` - Player's ckey (case-insensitive)
-/// * `pool` - Database connection pool
+/// * `ckey` - Player's ckey (case-insensitive).
+/// * `pool` - Database connection pool.
 ///
 /// # Returns
 ///
-/// `Some(discord_id)` if the player has a valid link, `None` otherwise
+/// `Some(discord_id)` if the player has a valid link, `None` otherwise.
 pub async fn discord_id_from_ckey(ckey: &str, pool: &MySqlPool) -> Result<Option<i64>> {
     let query = sqlx::query(
         "SELECT discord_id FROM discord_links WHERE LOWER(ckey) = ? AND valid = 1 LIMIT 1",

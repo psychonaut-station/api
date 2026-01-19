@@ -19,11 +19,11 @@ use super::{
 ///
 /// # Arguments
 ///
-/// * `address` - Socket address of the BYOND server
+/// * `address` - Socket address of the BYOND server.
 ///
 /// # Returns
 ///
-/// A `Status` object containing current server information
+/// A `Status` object containing current server information.
 ///
 /// # Errors
 ///
@@ -85,7 +85,7 @@ pub async fn status(address: SocketAddr) -> Result<Status> {
     }
 }
 
-/// Represents the current state of the game round.
+/// An enum representing the current state of the game round.
 #[derive(Default, Enum, Clone, Debug)]
 #[oai(rename_all = "lowercase")]
 pub enum GameState {
@@ -112,7 +112,7 @@ impl FromStr for GameState {
     }
 }
 
-/// Represents the station's security alert level.
+/// An enum representing the station's security alert level.
 #[derive(Default, Enum, Clone, Debug)]
 #[oai(rename_all = "lowercase")]
 pub enum SecurityLevel {
@@ -137,7 +137,7 @@ impl FromStr for SecurityLevel {
     }
 }
 
-/// Represents the current mode of the emergency shuttle.
+/// An enum representing the current mode of the emergency shuttle.
 #[derive(Default, Enum, Debug)]
 #[oai(rename_all = "lowercase")]
 pub enum ShuttleMode {
@@ -180,62 +180,62 @@ impl FromStr for ShuttleMode {
 /// Complete status information for a BYOND game server.
 #[derive(Default, Debug)]
 pub struct Status {
-    /// Game version (e.g., "/tg/Station 13")
+    /// Game version (e.g., "/tg/Station 13").
     pub version: String,
-    /// Whether respawning is enabled
+    /// Whether respawning is enabled.
     pub respawn: bool,
-    /// Whether new players can join the round
+    /// Whether new players can join the round.
     pub enter: bool,
-    /// Whether AI slot is available
+    /// Whether AI slot is available.
     pub ai: bool,
-    /// Name of the server host
+    /// Name of the server host.
     pub host: String,
-    /// Current round ID
+    /// Current round ID.
     pub round_id: u32,
-    /// Number of connected players
+    /// Number of connected players.
     pub players: u32,
-    /// Git revision hash
+    /// Git revision hash.
     pub revision: String,
-    /// Revision date
+    /// Revision date.
     pub revision_date: String,
-    /// Whether server is visible on BYOND hub
+    /// Whether server is visible on BYOND hub.
     pub hub: bool,
-    /// Short form server name used for its database
+    /// Short form server name used for its database.
     pub identifier: bool,
-    /// Number of online admins
+    /// Number of online admins.
     pub admins: u32,
-    /// Current game state
+    /// Current game state.
     pub gamestate: GameState,
-    /// Current map name
+    /// Current map name.
     pub map_name: String,
-    /// Current security alert level
+    /// Current security alert level.
     pub security_level: SecurityLevel,
-    /// Round duration in deciseconds
+    /// Round duration in deciseconds.
     pub round_duration: u32,
-    /// Current time dilation (server performance)
+    /// Current time dilation (server performance).
     pub time_dilation_current: f32,
-    /// Average time dilation
+    /// Average time dilation.
     pub time_dilation_avg: f32,
-    /// Slow average time dilation
+    /// Slow average time dilation.
     pub time_dilation_avg_slow: f32,
-    /// Fast average time dilation
+    /// Fast average time dilation.
     pub time_dilation_avg_fast: f32,
-    /// Soft population cap threshold
+    /// Soft population cap threshold.
     pub soft_popcap: u32,
-    /// Hard population cap threshold
+    /// Hard population cap threshold.
     pub hard_popcap: u32,
-    /// Extreme population cap threshold
+    /// Extreme population cap threshold.
     pub extreme_popcap: u32,
-    /// Whether population cap is active
+    /// Whether population cap is active.
     pub popcap: bool,
-    /// Whether server is in bunkered mode
+    /// Whether server is in bunkered mode.
     pub bunkered: bool,
-    /// Whether interviews are required for new players
+    /// Whether interviews are required for new players.
     pub interviews: bool,
-    /// Current shuttle mode
+    /// Current shuttle mode.
     pub shuttle_mode: ShuttleMode,
-    /// Shuttle timer in seconds
+    /// Shuttle timer in seconds.
     pub shuttle_timer: u32,
-    /// Public connection address
+    /// Public connection address.
     pub public_address: String,
 }

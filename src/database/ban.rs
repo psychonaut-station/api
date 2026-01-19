@@ -5,31 +5,31 @@ use crate::sqlxext::DateTime;
 
 use super::Result;
 
-/// Represents a ban record of a player.
+/// An object representing a ban record of a player.
 #[derive(Object)]
 pub struct Ban {
-    /// The time the ban was issued in YYYY-MM-DD HH:MM:SS format
+    /// The time the ban was issued in YYYY-MM-DD HH:MM:SS format.
     pub bantime: String,
-    /// The round ID when the ban was issued
+    /// The round ID when the ban was issued.
     pub round_id: Option<u32>,
-    /// The roles affected by the ban, comma-separated
+    /// The roles affected by the ban, comma-separated.
     pub roles: Option<String>,
     /// The expiration time of the ban, if applicable
-    /// in YYYY-MM-DD HH:MM:SS format, or null if permanent
+    /// in YYYY-MM-DD HH:MM:SS format, or null if permanent.
     pub expiration_time: Option<String>,
-    /// The reason for the ban
+    /// The reason for the ban.
     pub reason: String,
-    /// The ckey of the banned player
+    /// The ckey of the banned player.
     pub ckey: Option<String>,
-    /// The ckey of the admin who issued the ban
+    /// The ckey of the admin who issued the ban.
     pub a_ckey: String,
-    /// Additional edits or notes about the ban
+    /// Additional edits or notes about the ban.
     pub edits: Option<String>,
     /// The datetime when the ban was unbanned, if applicable
-    /// in YYYY-MM-DD HH:MM:SS format, or null if still banned
+    /// in YYYY-MM-DD HH:MM:SS format, or null if still banned.
     pub unbanned_datetime: Option<String>,
     /// The ckey of the admin who unbanned the player, if applicable
-    /// null if the player is still banned
+    /// null if the player is still banned.
     pub unbanned_ckey: Option<String>,
 }
 
@@ -58,12 +58,12 @@ impl FromRow<'_, MySqlRow> for Ban {
 ///
 /// # Arguments
 ///
-/// * `id` - The ID of the ban to retrieve
-/// * `pool` - Database connection pool
+/// * `id` - The ID of the ban to retrieve.
+/// * `pool` - Database connection pool.
 ///
 /// # Returns
 ///
-/// An optional `Ban` record if found
+/// An optional `Ban` record if found.
 pub async fn get_ban_by_id(id: u32, pool: &MySqlPool) -> Result<Option<Ban>> {
     let query = sqlx::query_as(
     	"SELECT id, bantime, round_id, GROUP_CONCAT(role ORDER BY role SEPARATOR ', ') AS roles, expiration_time, reason, ckey, a_ckey, edits, unbanned_datetime, unbanned_ckey FROM ban WHERE id = ? LIMIT 1"

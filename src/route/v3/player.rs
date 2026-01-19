@@ -22,11 +22,11 @@ pub struct Endpoint;
 impl Endpoint {
     /// /v3/player/{ckey}
     ///
-    /// Retrieves basic player information by ckey
+    /// Retrieves basic player information by ckey.
     #[oai(path = "/player/:ckey", method = "get")]
     async fn player(
         &self,
-        /// The player's ckey
+        /// The player's ckey.
         ckey: Path<String>,
         pool: Data<&MySqlPool>,
     ) -> PlayerResponse {
@@ -44,13 +44,13 @@ impl Endpoint {
 
     /// /v3/player/{ckey}/achievements
     ///
-    /// Retrieves unlocked achievements of the player
+    /// Retrieves unlocked achievements of the player.
     #[oai(path = "/player/:ckey/achievements", method = "get")]
     async fn player_achievements(
         &self,
-        /// The player's ckey
+        /// The player's ckey.
         ckey: Path<String>,
-        /// Optional filter for specific achievement type
+        /// Optional filter for specific achievement type.
         achievement_type: Query<Option<String>>,
         pool: Data<&MySqlPool>,
     ) -> PlayerAchievementsResponse {
@@ -68,11 +68,11 @@ impl Endpoint {
 
     /// /v3/player/{ckey}/activity
     ///
-    /// Retrieves 180 day activity for the player
+    /// Retrieves 180 day activity for the player.
     #[oai(path = "/player/:ckey/activity", method = "get")]
     async fn player_activity(
         &self,
-        /// The player's ckey
+        /// The player's ckey.
         ckey: Path<String>,
         pool: Data<&MySqlPool>,
     ) -> PlayerActivityResponse {
@@ -90,15 +90,15 @@ impl Endpoint {
 
     /// /v3/player/{ckey}/bans
     ///
-    /// Retrieves ban history for a specific player
+    /// Retrieves ban history for a specific player.
     #[oai(path = "/player/:ckey/bans", method = "get")]
     async fn player_bans(
         &self,
-        /// The player's ckey
+        /// The player's ckey.
         ckey: Path<String>,
-        /// Optional boolean to filter for permanent bans only
+        /// Optional boolean to filter for permanent bans only.
         permanent: Query<Option<bool>>,
-        /// Optional date string (YYYY-MM-DD format) to filter bans after a specific date
+        /// Optional date string (YYYY-MM-DD format) to filter bans after a specific date.
         #[oai(validator(pattern = "\\d{4}-\\d{2}-\\d{2}"))]
         since: Query<Option<String>>,
         pool: Data<&MySqlPool>,
@@ -117,11 +117,11 @@ impl Endpoint {
 
     /// /v3/player/{ckey}/characters
     ///
-    /// Retrieves characters associated with the player
+    /// Retrieves characters associated with the player.
     #[oai(path = "/player/:ckey/characters", method = "get")]
     async fn player_characters(
         &self,
-        /// The player's ckey
+        /// The player's ckey.
         ckey: Path<String>,
         pool: Data<&MySqlPool>,
     ) -> PlayerCharactersResponse {
@@ -140,65 +140,65 @@ impl Endpoint {
 
 #[derive(ApiResponse)]
 enum PlayerResponse {
-    /// Returns when wlayer data successfully retrieved
+    /// Returns when wlayer data successfully retrieved.
     #[oai(status = 200)]
     Success(Json<Player>),
-    /// Returns when player with the specified ckey does not exist
+    /// Returns when player with the specified ckey does not exist.
     #[oai(status = 404)]
     NotFound(PlainText<String>),
-    /// Returns when a database error occurred
+    /// Returns when a database error occurred.
     #[oai(status = 500)]
     InternalError(PlainText<String>),
 }
 
 #[derive(ApiResponse)]
 enum PlayerAchievementsResponse {
-    /// Returns when player achievements successfully retrieved
+    /// Returns when player achievements successfully retrieved.
     #[oai(status = 200)]
     Success(Json<Vec<Achievement>>),
-    /// Returns when player with the specified ckey does not exist
+    /// Returns when player with the specified ckey does not exist.
     #[oai(status = 404)]
     NotFound(PlainText<String>),
-    /// Returns when a database error occurred
+    /// Returns when a database error occurred.
     #[oai(status = 500)]
     InternalError(PlainText<String>),
 }
 
 #[derive(ApiResponse)]
 enum PlayerActivityResponse {
-    /// Returns when player activity successfully retrieved
+    /// Returns when player activity successfully retrieved.
     #[oai(status = 200)]
     Success(Json<Vec<Activity>>),
-    /// Returns when player with the specified ckey does not exist
+    /// Returns when player with the specified ckey does not exist.
     #[oai(status = 404)]
     NotFound(PlainText<String>),
-    /// Returns when a database error occurred
+    /// Returns when a database error occurred.
     #[oai(status = 500)]
     InternalError(PlainText<String>),
 }
 
 #[derive(ApiResponse)]
 enum PlayerBansResponse {
-    /// Returns when player bans successfully retrieved
+    /// Returns when player bans successfully retrieved.
     #[oai(status = 200)]
     Success(Json<Vec<Ban>>),
-    /// Returns when player with the specified ckey does not exist
+    /// Returns when player with the specified ckey does not exist.
     #[oai(status = 404)]
     NotFound(PlainText<String>),
-    /// Returns when a database error occurred
+    /// Returns when a database error occurred.
     #[oai(status = 500)]
     InternalError(PlainText<String>),
 }
 
 #[derive(ApiResponse)]
 enum PlayerCharactersResponse {
-    /// Returns when player characters successfully retrieved
+    /// Returns when player characters successfully retrieved.
     #[oai(status = 200)]
     Success(Json<Vec<Character>>),
-    /// Returns when player with the specified ckey does not exist
+    /// Returns when player with the specified ckey does not exist.
     #[oai(status = 404)]
     NotFound(PlainText<String>),
-    /// Returns when a database error occurred
+    /// Returns when a database error occurred.
     #[oai(status = 500)]
     InternalError(PlainText<String>),
 }

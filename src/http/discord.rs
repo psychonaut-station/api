@@ -30,11 +30,11 @@ static DISCORD_GLOBAL_BUCKET: Lazy<TokenBucket> = Lazy::new(|| TokenBucket::new(
 /// Structure representing an error message returned by the Discord API.
 #[derive(Debug, Deserialize)]
 struct ErrorMessage {
-    /// Discord error code
+    /// Discord error code.
     ///
     /// See: <https://discord.com/developers/docs/topics/opcodes-and-status-codes#json>
     code: u32,
-    /// Human-readable error message
+    /// Human-readable error message.
     message: String,
 }
 
@@ -68,17 +68,17 @@ static DISCORD_GET_MEMBER_BUCKET: Lazy<TokenBucket> = Lazy::new(|| TokenBucket::
 ///
 /// # Arguments
 ///
-/// * `user_id` - Discord user ID
-/// * `guild_id` - Our guild (server) ID
-/// * `token` - Our bot token
+/// * `user_id` - Discord user ID.
+/// * `guild_id` - Our guild (server) ID.
+/// * `token` - Our bot token.
 ///
 /// # Returns
 ///
-/// Guild member object
+/// Guild member object.
 ///
 /// # Errors
 ///
-/// Returns an error if the request fails or the user is not a member of the guild
+/// Returns an error if the request fails or the user is not a member of the guild.
 pub async fn get_guild_member(user_id: i64, guild_id: i64, token: &str) -> Result<GuildMember> {
     let _permit = DISCORD_GLOBAL_BUCKET.acquire().await;
     let _permit = DISCORD_GET_MEMBER_BUCKET.acquire().await;
@@ -113,17 +113,17 @@ static DISCORD_SEARCH_MEMBER_BUCKET: Lazy<TokenBucket> = Lazy::new(|| TokenBucke
 ///
 /// # Arguments
 ///
-/// * `query` - JSON-encoded search query with filters
-/// * `guild_id` - Our guild (server) ID
-/// * `token` - Our bot token
+/// * `query` - JSON-encoded search query with filters.
+/// * `guild_id` - Our guild (server) ID.
+/// * `token` - Our bot token.
 ///
 /// # Returns
 ///
-/// A list of Discord user IDs matching the search criteria
+/// A list of Discord user IDs matching the search criteria.
 ///
 /// # Errors
 ///
-/// Returns an error if the request fails or is rate-limited
+/// Returns an error if the request fails or is rate-limited.
 pub async fn search_members(query: String, guild_id: i64, token: &str) -> Result<Vec<String>> {
     let _permit = DISCORD_GLOBAL_BUCKET.acquire().await;
     let _permit = DISCORD_SEARCH_MEMBER_BUCKET.acquire().await;

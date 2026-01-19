@@ -23,7 +23,7 @@ pub struct Endpoint;
 impl Endpoint {
     /// /v3/patreon
     ///
-    /// Retrieves the list of our Patreon supporters' ckeys
+    /// Retrieves the list of our Patreon supporters' ckeys.
     #[oai(path = "/patreon", method = "get")]
     async fn patreon(&self, pool: Data<&MySqlPool>, config: Data<&Config>) -> PatreonResponse {
         match get_patrons(&pool, &config).await {
@@ -37,10 +37,11 @@ impl Endpoint {
 
     /// /v3/patreon/{ckey}
     ///
-    /// Checks if a given ckey is a Patreon supporter
+    /// Checks if a given ckey is a Patreon supporter.
     #[oai(path = "/patreon/:ckey", method = "get")]
     async fn patreon_status(
         &self,
+        /// The ckey to check.
         ckey: Path<String>,
         pool: Data<&MySqlPool>,
         config: Data<&Config>,
@@ -57,20 +58,20 @@ impl Endpoint {
 
 #[derive(ApiResponse)]
 enum PatreonResponse {
-    /// Returns when Patreon supporters successfully retrieved
+    /// Returns when Patreon supporters successfully retrieved.
     #[oai(status = 200)]
     Success(Json<Vec<String>>),
-    /// Returns when a database or HTTP error occurred
+    /// Returns when a database or HTTP error occurred.
     #[oai(status = 500)]
     InternalError(PlainText<String>),
 }
 
 #[derive(ApiResponse)]
 enum PatreonStatusResponse {
-    /// Returns whether the specified ckey is a Patreon supporter
+    /// Returns whether the specified ckey is a Patreon supporter.
     #[oai(status = 200)]
     Success(Json<bool>),
-    /// Returns when a database or HTTP error occurred
+    /// Returns when a database or HTTP error occurred.
     #[oai(status = 500)]
     InternalError(PlainText<String>),
 }

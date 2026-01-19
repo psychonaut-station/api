@@ -53,11 +53,11 @@ async fn main() -> color_eyre::Result<()> {
 ///
 /// # Arguments
 ///
-/// * `config` - Database configuration containing connection details
+/// * `config` - Database configuration containing connection details.
 ///
 /// # Returns
 ///
-/// A configured MySQL connection pool with desired settings
+/// A configured connection pool with desired settings.
 fn pool(config: &DatabaseConfig) -> MySqlPool {
     let connect_options = MySqlConnectOptions::new()
         .username(&config.user)

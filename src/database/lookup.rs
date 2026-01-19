@@ -13,14 +13,14 @@ use super::Result;
 const EXCLUSION_SUBNET: &str =
     " AND INET_NTOA(ip & INET_ATON('255.255.0.0')) NOT IN ('104.28.0.0')";
 
-/// Represents a row for lookup results.
+/// An object representing a row of lookup results.
 #[derive(Object)]
 pub struct Lookup {
-    /// The computer ID of the player
+    /// The computer ID of the player.
     pub computerid: String,
-    /// The IP address of the player
+    /// The IP address of the player.
     pub ip: String,
-    /// The ckey of the player
+    /// The ckey of the player.
     pub ckey: String,
 }
 
@@ -41,12 +41,12 @@ impl FromRow<'_, MySqlRow> for Lookup {
 ///
 /// # Arguments
 ///
-/// * `cid` - Computer ID to search for
-/// * `pool` - Database connection pool
+/// * `cid` - Computer ID to search for.
+/// * `pool` - Database connection pool.
 ///
 /// # Returns
 ///
-/// A list of related connections grouped by ckey, computer ID, and IP
+/// A list of related connections grouped by ckey, computer ID, and IP.
 pub async fn lookup_cid(cid: &str, pool: &MySqlPool) -> Result<Vec<Lookup>> {
     const SQL: &str = const_format!(
         "SELECT computerid, INET_NTOA(ip) AS ip, ckey FROM connection_log WHERE
@@ -67,12 +67,12 @@ pub async fn lookup_cid(cid: &str, pool: &MySqlPool) -> Result<Vec<Lookup>> {
 ///
 /// # Arguments
 ///
-/// * `ip` - IP address to search for
-/// * `pool` - Database connection pool
+/// * `ip` - IP address to search for.
+/// * `pool` - Database connection pool.
 ///
 /// # Returns
 ///
-/// A list of related connections grouped by ckey, computer ID, and IP
+/// A list of related connections grouped by ckey, computer ID, and IP.
 pub async fn lookup_ip(ip: &str, pool: &MySqlPool) -> Result<Vec<Lookup>> {
     const SQL: &str = const_format!(
         "SELECT computerid, INET_NTOA(ip) AS ip, ckey FROM connection_log WHERE
@@ -93,12 +93,12 @@ pub async fn lookup_ip(ip: &str, pool: &MySqlPool) -> Result<Vec<Lookup>> {
 ///
 /// # Arguments
 ///
-/// * `ckey` - Player's ckey to search for
-/// * `pool` - Database connection pool
+/// * `ckey` - Player's ckey to search for.
+/// * `pool` - Database connection pool.
 ///
 /// # Returns
 ///
-/// A list of related connections grouped by ckey, computer ID, and IP
+/// A list of related connections grouped by ckey, computer ID, and IP.
 pub async fn lookup_player(ckey: &str, pool: &MySqlPool) -> Result<Vec<Lookup>> {
     const SQL: &str = const_format!(
         "SELECT computerid, INET_NTOA(ip) AS ip, ckey FROM connection_log WHERE

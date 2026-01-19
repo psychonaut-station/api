@@ -21,7 +21,7 @@ pub struct Endpoint;
 impl Endpoint {
     /// /v3/server
     ///
-    /// Retrieves the status of the game servers
+    /// Retrieves the status of the game servers.
     #[oai(path = "/server", method = "get")]
     async fn server(&self, cache: Data<&Cache>, config: Data<&Config>) -> Response {
         if let Some(cached) = cache.get_server_status().await {
@@ -70,47 +70,50 @@ impl Endpoint {
 
 #[derive(ApiResponse)]
 enum Response {
-    /// Returns when server status successfully retrieved
+    /// Returns when server status successfully retrieved.
     #[oai(status = 200)]
     Success(Json<Vec<Server>>),
 }
 
+/// A union representing either an online or offline server.
 #[derive(Union, Clone)]
 pub enum Server {
-    /// The server is online and provides its status
+    /// The server is online and provides its status.
     Online(Online),
-    /// The server is offline or unreachable
+    /// The server is offline or unreachable.
     Offline(Offline),
 }
 
+/// An object representing an online server's status.
 #[derive(Object, Clone)]
 #[oai(rename = "ServerOnline")]
 pub struct Online {
-    /// The display name of the server
+    /// The display name of the server.
     name: String,
-    /// The connection address of the server
+    /// The connection address of the server.
     address: String,
-    /// The ID of the current round
+    /// The ID of the current round.
     round_id: u32,
-    /// The number of players currently on the server
+    /// The number of players currently on the server.
     players: u32,
-    /// The name of the current map
+    /// The name of the current map.
     map: String,
-    /// The security level in the round
+    /// The security level in the round.
     security_level: SecurityLevel,
-    /// The duration of the current round in seconds
+    /// The duration of the current round in seconds.
     round_duration: u32,
-    /// The state of the round
+    /// The state of the round.
     gamestate: GameState,
 }
 
+/// An object representing an offline server's status.
 #[derive(Object, Clone)]
 #[oai(rename = "ServerOffline")]
 pub struct Offline {
-    /// The display name of the server
+    /// The display name of the server.
     name: String,
-    /// The connection address of the server
+    /// The connection address of the server.
     address: String,
-    /// The error message to display when the server is offline
+    /// The error message to display when the server is offline.
     error_message: String,
 }

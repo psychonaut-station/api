@@ -21,7 +21,7 @@ pub struct Endpoint;
 impl Endpoint {
     /// /v3/recent-test-merges.json
     ///
-    /// Retrieves the most recent test merges
+    /// Retrieves the 200 most recent test merges.
     #[oai(path = "/recent-test-merges.json", method = "get")]
     async fn recent_test_merges(&self, pool: Data<&MySqlPool>, cache: Data<&Cache>) -> Response {
         if let Some(cached) = cache.get_recent_test_merges().await {
@@ -44,10 +44,10 @@ impl Endpoint {
 
 #[derive(ApiResponse)]
 enum Response {
-    /// Returns when recent test merges successfully retrieved
+    /// Returns when recent test merges successfully retrieved.
     #[oai(status = 200)]
     Success(Json<Vec<TestMerge>>),
-    /// Returns when a database error occurred
+    /// Returns when a database error occurred.
     #[oai(status = 500)]
     InternalError(PlainText<String>),
 }

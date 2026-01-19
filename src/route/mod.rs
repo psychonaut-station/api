@@ -16,7 +16,7 @@ const STOPLIGHT_ELEMENTS: &str = include_str!("stoplight-elements.html");
 ///
 /// # Returns
 ///
-/// A configured `Route` with all API endpoints and UI
+/// A configured `Route` with all API endpoints and UI.
 pub(super) fn route() -> Route {
     let service = v3::service();
     let ui_html = STOPLIGHT_ELEMENTS.replace("'{:spec}'", &service.spec());

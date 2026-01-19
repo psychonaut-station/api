@@ -25,7 +25,7 @@ impl Endpoint {
     #[oai(path = "/roletime/player/:ckey", method = "get")]
     async fn roletime_player(
         &self,
-        /// The player's ckey
+        /// The player's ckey.
         ckey: Path<String>,
         pool: Data<&MySqlPool>,
     ) -> RoletimePlayerResponse {
@@ -47,7 +47,7 @@ impl Endpoint {
     #[oai(path = "/roletime/top/:job", method = "get")]
     async fn roletime_top(
         &self,
-        /// The job to filter by
+        /// The job to filter by.
         job: Path<String>,
         pool: Data<&MySqlPool>,
     ) -> RoletimeTopResponse {
@@ -63,23 +63,23 @@ impl Endpoint {
 
 #[derive(ApiResponse)]
 enum RoletimePlayerResponse {
-    /// Returns when roletimes successfully retrieved
+    /// Returns when roletimes successfully retrieved.
     #[oai(status = 200)]
     Success(Json<Vec<PlayerRoletime>>),
-    /// Returns when player not found
+    /// Returns when player not found.
     #[oai(status = 404)]
     NotFound(PlainText<String>),
-    /// Returns when an internal error occurs
+    /// Returns when an internal error occurs.
     #[oai(status = 500)]
     InternalError(PlainText<String>),
 }
 
 #[derive(ApiResponse)]
 enum RoletimeTopResponse {
-    /// Returns when top players successfully retrieved
+    /// Returns when top players successfully retrieved.
     #[oai(status = 200)]
     Success(Json<Vec<JobRoletime>>),
-    /// Returns when an internal error occurs
+    /// Returns when an internal error occurs.
     #[oai(status = 500)]
     InternalError(PlainText<String>),
 }

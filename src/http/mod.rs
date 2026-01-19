@@ -21,15 +21,15 @@ pub static HTTP_CLIENT: Lazy<Client> = Lazy::new(Client::new);
 
 /// Internal state for the token bucket rate limiter.
 struct TokenBucketInner {
-    /// Current number of available tokens
+    /// Current number of available tokens.
     tokens: usize,
-    /// Current capacity (reduced temporarily when tokens are acquired)
+    /// Current capacity (reduced temporarily when tokens are acquired).
     capacity: usize,
-    /// Maximum capacity that can be restored
+    /// Maximum capacity that can be restored.
     max_capacity: usize,
-    /// Last time tokens were refilled
+    /// Last time tokens were refilled.
     last_refill: Instant,
-    /// Duration between refills
+    /// Duration between refills.
     refill_interval: Duration,
 }
 
@@ -38,7 +38,7 @@ struct TokenBucketInner {
 /// When dropped, the permit returns the token to the bucket.
 #[must_use = "must hold permit to keep token reserved"]
 pub struct BucketPermit<'a> {
-    /// Reference to the locked token bucket inner state
+    /// Reference to the locked token bucket inner state.
     bucket: MutexGuard<'a, TokenBucketInner>,
 }
 
@@ -54,7 +54,7 @@ impl<'a> Drop for BucketPermit<'a> {
 /// intervals. Each request consumes a token, and if no tokens are available,
 /// the request must wait until the next refill.
 pub struct TokenBucket {
-    /// Shared inner state of the token bucket
+    /// Shared inner state of the token bucket.
     inner: Arc<Mutex<TokenBucketInner>>,
 }
 
@@ -63,8 +63,8 @@ impl TokenBucket {
     ///
     /// # Arguments
     ///
-    /// * `capacity` - Maximum number of tokens in the bucket
-    /// * `refill_interval` - Time in seconds between refills
+    /// * `capacity` - Maximum number of tokens in the bucket.
+    /// * `refill_interval` - Time in seconds between refills.
     pub fn new(capacity: usize, refill_interval: f32) -> Self {
         let inner = TokenBucketInner {
             tokens: capacity,
@@ -97,7 +97,7 @@ impl TokenBucket {
     ///
     /// # Returns
     ///
-    /// A `BucketPermit` that must be held to keep the token reserved
+    /// A `BucketPermit` that must be held to keep the token reserved.
     pub async fn acquire(&self) -> BucketPermit<'_> {
         loop {
             let mut inner = self.inner.lock().await;

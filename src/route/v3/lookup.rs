@@ -20,11 +20,11 @@ pub struct Endpoint;
 impl Endpoint {
     /// /v3/lookup/cid/{cid}
     ///
-    /// Retrieves lookup information by computer ID
+    /// Retrieves lookup information by computer ID.
     #[oai(path = "/lookup/cid/:cid", method = "get")]
     async fn lookup_cid(
         &self,
-        /// The computer ID to look up
+        /// The computer ID to look up.
         cid: Path<String>,
         pool: Data<&MySqlPool>,
     ) -> LookupResponse {
@@ -39,11 +39,11 @@ impl Endpoint {
 
     /// /v3/lookup/ip/{ip}
     ///
-    /// Retrieves lookup information by IP address
+    /// Retrieves lookup information by IP address.
     #[oai(path = "/lookup/ip/:ip", method = "get")]
     async fn lookup_ip(
         &self,
-        /// The IP address to look up
+        /// The IP address to look up.
         #[oai(validator(pattern = "\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}"))]
         ip: Path<String>,
         pool: Data<&MySqlPool>,
@@ -59,7 +59,7 @@ impl Endpoint {
 
     /// /v3/lookup/player/{ckey}
     ///
-    /// Retrieves lookup information by player's ckey
+    /// Retrieves lookup information by player's ckey.
     #[oai(path = "/lookup/player/:ckey", method = "get")]
     async fn lookup_player(
         &self,
@@ -79,10 +79,10 @@ impl Endpoint {
 
 #[derive(ApiResponse)]
 enum LookupResponse {
-    /// Returns when lookup successfully retrieved
+    /// Returns when lookup successfully retrieved.
     #[oai(status = 200)]
     Success(Json<Vec<Lookup>>),
-    /// Returns when a database error occurred
+    /// Returns when a database error occurred.
     #[oai(status = 500)]
     InternalError(PlainText<String>),
 }

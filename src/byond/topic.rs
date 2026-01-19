@@ -18,22 +18,22 @@ const BYOND_PACKET_HEADER_SIZE: usize = 4;
 
 /// Header information from a BYOND topic response.
 struct ResponseHeader {
-    /// Response type identifier
+    /// Response type identifier.
     #[allow(dead_code)]
     r#type: u16,
-    /// Size of the response payload in bytes
+    /// Size of the response payload in bytes.
     size: usize,
 }
 
 /// Possible response types from a BYOND topic query.
 #[derive(Debug)]
 pub enum Response {
-    /// Null response (no data)
+    /// Null response (no data).
     Null,
-    /// Floating-point number response
+    /// Floating-point number response.
     #[allow(dead_code)]
     Float(f32),
-    /// String response
+    /// String response.
     String(String),
 }
 
@@ -44,12 +44,12 @@ pub enum Response {
 ///
 /// # Arguments
 ///
-/// * `address` - Socket address of the BYOND server
-/// * `data` - Topic query string (e.g., "?status")
+/// * `address` - Socket address of the BYOND server.
+/// * `data` - Topic query string (e.g., "?status").
 ///
 /// # Returns
 ///
-/// A parsed `Response` from the server
+/// A parsed `Response` from the server.
 ///
 /// # Errors
 ///

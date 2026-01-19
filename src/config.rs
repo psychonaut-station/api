@@ -24,11 +24,11 @@ impl Config {
     ///
     /// # Arguments
     ///
-    /// * `path` - Path to the configuration file
+    /// * `path` - Path to the configuration file.
     ///
     /// # Errors
     ///
-    /// Returns an error if the file cannot be read or if the TOML is invalid
+    /// Returns an error if the file cannot be read or if the TOML is invalid.
     pub fn read_from_file(path: &str) -> Result<Self, Error> {
         let content = read_to_string(path)?;
         Ok(Self(Arc::new(toml::from_str::<InnerConfig>(&content)?)))
@@ -47,15 +47,15 @@ impl Deref for Config {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct InnerConfig {
-    /// IP address to bind the server to
+    /// IP address to bind the server to.
     pub address: IpAddr,
-    /// Port number to listen on
+    /// Port number to listen on.
     pub port: u16,
-    /// Database connection configuration
+    /// Database connection configuration.
     pub database: DatabaseConfig,
-    /// Discord API configuration
+    /// Discord API configuration.
     pub discord: DiscordConfig,
-    /// List of game servers to monitor
+    /// List of game servers to monitor.
     pub servers: Vec<ServerConfig>,
 }
 
@@ -63,15 +63,15 @@ pub struct InnerConfig {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct DatabaseConfig {
-    /// Database username
+    /// Database username.
     pub user: String,
-    /// Database password
+    /// Database password.
     pub password: String,
-    /// Database host address
+    /// Database host address.
     pub host: String,
-    /// Database port
+    /// Database port.
     pub port: u16,
-    /// Database name
+    /// Database name.
     pub name: String,
 }
 
@@ -79,11 +79,11 @@ pub struct DatabaseConfig {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct DiscordConfig {
-    /// Discord bot token for API authentication
+    /// Discord bot token for API authentication.
     pub token: String,
-    /// Discord guild (server) ID to monitor
+    /// Discord guild (server) ID to monitor.
     pub guild: i64,
-    /// Discord role ID for Patreon supporters
+    /// Discord role ID for Patreon supporters.
     pub patreon_role: i64,
 }
 
@@ -91,13 +91,13 @@ pub struct DiscordConfig {
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ServerConfig {
-    /// Display name of the server
+    /// Display name of the server.
     pub name: String,
-    /// Internal socket address for queries
+    /// Internal socket address for queries.
     pub address: SocketAddr,
-    /// Public connection address for players
+    /// Public connection address for players.
     pub connection_address: String,
-    /// Error message to display when server is unavailable
+    /// Error message to display when server is unavailable.
     pub error_message: String,
 }
 
