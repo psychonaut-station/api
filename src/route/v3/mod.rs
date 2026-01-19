@@ -2,6 +2,7 @@
 //!
 //! Contains all v3 API endpoint implementations.
 
+mod ban;
 mod lookup;
 mod patreon;
 mod player;
@@ -22,10 +23,11 @@ macro_rules! service {
 }
 
 service!(
+    ban,
     lookup,
+    patreon,
     player,
     recent_test_merges,
     roletime,
     server,
-    patreon,
 );

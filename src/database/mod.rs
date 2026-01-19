@@ -2,12 +2,14 @@
 //!
 //! Provides various functions for querying the database.
 
+pub mod ban;
 mod lookup;
 mod player;
 mod recent_test_merges;
 mod roletime;
 mod verification;
 
+pub use ban::*;
 pub use lookup::*;
 pub use player::*;
 pub use recent_test_merges::*;
