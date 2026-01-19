@@ -2,6 +2,7 @@ mod byond;
 mod cache;
 mod config;
 mod database;
+mod http;
 mod route;
 mod sqlxext;
 

@@ -31,6 +31,7 @@ pub struct InnerConfig {
     pub address: IpAddr,
     pub port: u16,
     pub database: DatabaseConfig,
+    pub discord: DiscordConfig,
     pub servers: Vec<ServerConfig>,
 }
 
@@ -46,6 +47,14 @@ pub struct DatabaseConfig {
 
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
+pub struct DiscordConfig {
+    pub token: String,
+    pub guild: i64,
+    pub patreon_role: i64,
+}
+
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ServerConfig {
     pub name: String,
     pub address: SocketAddr,
@@ -55,8 +64,8 @@ pub struct ServerConfig {
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
-    #[error("failed to read configuration file")]
+    #[error("failed to read configuration file: {0}")]
     Io(#[from] std::io::Error),
-    #[error("failed to parse configuration file")]
+    #[error("failed to parse configuration file: {0}")]
     Toml(#[from] toml::de::Error),
 }

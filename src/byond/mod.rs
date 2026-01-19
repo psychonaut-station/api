@@ -7,13 +7,13 @@ type Result<T> = std::result::Result<T, Error>;
 
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
-    #[error("BYOND topic timeout")]
+    #[error("BYOND topic timeout: {0}")]
     Elapsed(#[from] tokio::time::error::Elapsed),
-    #[error("BYOND topic IO error")]
+    #[error("BYOND topic IO error: {0}")]
     Io(#[from] std::io::Error),
-    #[error("BYOND topic int parse error")]
+    #[error("BYOND topic int parse error: {0}")]
     ParseInt(#[from] std::num::ParseIntError),
-    #[error("BYOND topic float parse error")]
+    #[error("BYOND topic float parse error: {0}")]
     ParseFloat(#[from] std::num::ParseFloatError),
 
     #[error("BYOND topic invalid response")]

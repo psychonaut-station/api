@@ -1,8 +1,8 @@
 **Endpoints to implement:**
 
 - [x] /recent-test-merges.json
-- [ ] /v2/patreon?ckey
-- [ ] /v2/patreon/patrons
+- [x] /v2/patreon?ckey
+- [x] /v2/patreon/patrons
 - [x] /v2/player?ckey
 - [x] /v2/player/ban?ckey&permanent&since
 - [x] /v2/player/characters?ckey

@@ -2,11 +2,13 @@ mod lookup;
 mod player;
 mod recent_test_merges;
 mod roletime;
+mod verification;
 
 pub use lookup::*;
 pub use player::*;
 pub use recent_test_merges::*;
 pub use roletime::*;
+pub use verification::*;
 
 use poem_openapi::payload::PlainText;
 use sqlx::{Executor, MySql};
@@ -17,13 +19,17 @@ type Result<T> = std::result::Result<T, Error>;
 pub enum Error {
     #[error("internal database error")]
     Sqlx(#[from] sqlx::Error),
-    #[error("failed to parse JSON")]
+    #[error("failed to parse JSON: {0}")]
     Json(#[from] serde_json::Error),
-    #[error("failed to parse integer")]
+    #[error("failed to perform HTTP request: {0}")]
+    Http(#[from] crate::http::Error),
+    #[error("failed to parse integer: {0}")]
     ParseInt(#[from] std::num::ParseIntError),
     //
     #[error("player not found")]
     PlayerNotFound,
+    #[error("player not linked to Discord account")]
+    NotLinked,
 }
 
 impl From<Error> for PlainText<String> {
