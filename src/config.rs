@@ -51,6 +51,8 @@ pub struct InnerConfig {
     pub address: IpAddr,
     /// Port number to listen on.
     pub port: u16,
+    /// API key for authenticating requests.
+    pub key: String,
     /// Database connection configuration.
     pub database: DatabaseConfig,
     /// Discord API configuration.

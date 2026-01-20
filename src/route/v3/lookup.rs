@@ -14,6 +14,8 @@ use tracing::error;
 
 use crate::database::{Lookup, lookup_cid, lookup_ip, lookup_player};
 
+use super::KeyGuard;
+
 pub struct Endpoint;
 
 #[OpenApi]
@@ -27,6 +29,7 @@ impl Endpoint {
         /// The computer ID to look up.
         cid: Path<String>,
         pool: Data<&MySqlPool>,
+        _api_key: KeyGuard,
     ) -> LookupResponse {
         match lookup_cid(&cid, &pool).await {
             Ok(lookup) => LookupResponse::Success(Json(lookup)),
@@ -47,6 +50,7 @@ impl Endpoint {
         #[oai(validator(pattern = "\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}\\.\\d{1,3}"))]
         ip: Path<String>,
         pool: Data<&MySqlPool>,
+        _api_key: KeyGuard,
     ) -> LookupResponse {
         match lookup_ip(&ip, &pool).await {
             Ok(lookup) => LookupResponse::Success(Json(lookup)),
@@ -66,6 +70,7 @@ impl Endpoint {
         /// The player's ckey
         ckey: Path<String>,
         pool: Data<&MySqlPool>,
+        _api_key: KeyGuard,
     ) -> LookupResponse {
         match lookup_player(&ckey, &pool).await {
             Ok(lookup) => LookupResponse::Success(Json(lookup)),

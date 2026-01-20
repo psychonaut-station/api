@@ -10,6 +10,8 @@ mod recent_test_merges;
 mod roletime;
 pub mod server;
 
+pub use super::KeyGuard;
+
 /// Macro for generating an [OpenAPI service](poem_openapi::OpenApiService) with multiple endpoint modules.
 ///
 /// This macro takes a list of endpoint modules and creates an OpenAPI service

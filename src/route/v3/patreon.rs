@@ -17,6 +17,8 @@ use crate::{
     database::{get_patrons, is_patron},
 };
 
+use super::KeyGuard;
+
 pub struct Endpoint;
 
 #[OpenApi]
@@ -25,7 +27,12 @@ impl Endpoint {
     ///
     /// Retrieves the list of our Patreon supporters' ckeys.
     #[oai(path = "/patreon", method = "get")]
-    async fn patreon(&self, pool: Data<&MySqlPool>, config: Data<&Config>) -> PatreonResponse {
+    async fn patreon(
+        &self,
+        pool: Data<&MySqlPool>,
+        config: Data<&Config>,
+        _api_key: KeyGuard,
+    ) -> PatreonResponse {
         match get_patrons(&pool, &config).await {
             Ok(patrons) => PatreonResponse::Success(Json(patrons)),
             Err(e) => {
@@ -45,6 +52,7 @@ impl Endpoint {
         ckey: Path<String>,
         pool: Data<&MySqlPool>,
         config: Data<&Config>,
+        _api_key: KeyGuard,
     ) -> PatreonStatusResponse {
         match is_patron(&ckey, &pool, &config).await {
             Ok(is) => PatreonStatusResponse::Success(Json(is)),

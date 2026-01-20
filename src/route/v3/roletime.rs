@@ -15,6 +15,8 @@ use crate::database::{
     Error as DatabaseError, JobRoletime, PlayerRoletime, get_roletime_player, get_roletime_top,
 };
 
+use super::KeyGuard;
+
 pub struct Endpoint;
 
 #[OpenApi]
@@ -28,6 +30,7 @@ impl Endpoint {
         /// The player's ckey.
         ckey: Path<String>,
         pool: Data<&MySqlPool>,
+        _api_key: KeyGuard,
     ) -> RoletimePlayerResponse {
         match get_roletime_player(&ckey, &pool).await {
             Ok(roletime) => RoletimePlayerResponse::Success(Json(roletime)),
@@ -50,6 +53,7 @@ impl Endpoint {
         /// The job to filter by.
         job: Path<String>,
         pool: Data<&MySqlPool>,
+        _api_key: KeyGuard,
     ) -> RoletimeTopResponse {
         match get_roletime_top(&job, &pool).await {
             Ok(roletime) => RoletimeTopResponse::Success(Json(roletime)),

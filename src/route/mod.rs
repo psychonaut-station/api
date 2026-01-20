@@ -5,7 +5,11 @@
 
 pub mod v3;
 
-use poem::{Route, endpoint::make_sync, web::Html};
+use poem::{Request, Route, endpoint::make_sync, web::Html};
+use poem_openapi::{SecurityScheme, auth::ApiKey};
+use subtle::ConstantTimeEq;
+
+use crate::config::Config;
 
 /// Embedded HTML content for the API documentation viewer.
 const STOPLIGHT_ELEMENTS: &str = include_str!("stoplight-elements.html");
@@ -24,4 +28,30 @@ pub(super) fn route() -> Route {
     Route::new()
         .nest("/v3", service)
         .nest("/", make_sync(move |_| Html(ui_html.clone())))
+}
+
+/// Security scheme/guard for API key authentication.
+///
+/// Validates requests using an `X-API-Key` header.
+#[derive(SecurityScheme)]
+#[oai(
+    ty = "api_key",
+    key_name = "X-API-Key",
+    key_in = "header",
+    checker = "key_checker"
+)]
+pub struct KeyGuard(());
+
+/// Validates the API key in constant time to prevent timing attacks.
+///
+/// Compares the provided API key against the configured key using constant-time
+/// comparison from the [`subtle`] crate. This prevents attackers from using timing
+/// information to guess the API key character by character.
+// TODO: Should we log failed authentication attempts for security monitoring?
+async fn key_checker(req: &Request, api_key: ApiKey) -> Option<()> {
+    let key = req.data::<Config>()?.key.as_bytes();
+    match key.ct_eq(api_key.key.as_bytes()).unwrap_u8() {
+        1 => Some(()),
+        _ => None,
+    }
 }

@@ -12,6 +12,8 @@ use sqlx::MySqlPool;
 
 use crate::database::{Ban, get_ban_by_id};
 
+use super::KeyGuard;
+
 pub struct Endpoint;
 
 #[OpenApi]
@@ -25,6 +27,7 @@ impl Endpoint {
         /// The ID of the ban to retrieve.
         id: Path<u32>,
         pool: Data<&MySqlPool>,
+        _api_key: KeyGuard,
     ) -> Response {
         match get_ban_by_id(*id, &pool).await {
             Ok(Some(ban)) => Response::Success(Json(ban)),
