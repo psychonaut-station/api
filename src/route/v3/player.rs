@@ -31,7 +31,7 @@ impl Endpoint {
         /// The player's ckey.
         ckey: Path<String>,
         pool: Data<&MySqlPool>,
-        _api_key: KeyGuard,
+        _api_key: KeyGuard<2>,
     ) -> PlayerResponse {
         match get_player(&ckey, &pool).await {
             Ok(player) => PlayerResponse::Success(Json(player)),
@@ -56,7 +56,7 @@ impl Endpoint {
         /// Optional filter for specific achievement type.
         achievement_type: Query<Option<String>>,
         pool: Data<&MySqlPool>,
-        _api_key: KeyGuard,
+        _api_key: KeyGuard<2>,
     ) -> PlayerAchievementsResponse {
         match get_player_achievements(&ckey, &achievement_type, &pool).await {
             Ok(achievements) => PlayerAchievementsResponse::Success(Json(achievements)),
@@ -79,7 +79,7 @@ impl Endpoint {
         /// The player's ckey.
         ckey: Path<String>,
         pool: Data<&MySqlPool>,
-        _api_key: KeyGuard,
+        _api_key: KeyGuard<2>,
     ) -> PlayerActivityResponse {
         match get_player_activity(&ckey, &pool).await {
             Ok(activity) => PlayerActivityResponse::Success(Json(activity)),
@@ -107,7 +107,7 @@ impl Endpoint {
         #[oai(validator(pattern = "\\d{4}-\\d{2}-\\d{2}"))]
         since: Query<Option<String>>,
         pool: Data<&MySqlPool>,
-        _api_key: KeyGuard,
+        _api_key: KeyGuard<2>,
     ) -> PlayerBansResponse {
         match get_player_bans(&ckey, permanent.unwrap_or(false), &since, &pool).await {
             Ok(bans) => PlayerBansResponse::Success(Json(bans)),
@@ -130,7 +130,7 @@ impl Endpoint {
         /// The player's ckey.
         ckey: Path<String>,
         pool: Data<&MySqlPool>,
-        _api_key: KeyGuard,
+        _api_key: KeyGuard<2>,
     ) -> PlayerCharactersResponse {
         match get_player_characters(&ckey, &pool).await {
             Ok(characters) => PlayerCharactersResponse::Success(Json(characters)),

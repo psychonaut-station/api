@@ -27,7 +27,7 @@ impl Endpoint {
         /// The ID of the ban to retrieve.
         id: Path<u32>,
         pool: Data<&MySqlPool>,
-        _api_key: KeyGuard,
+        _api_key: KeyGuard<2>,
     ) -> Response {
         match get_ban_by_id(*id, &pool).await {
             Ok(Some(ban)) => Response::Success(Json(ban)),

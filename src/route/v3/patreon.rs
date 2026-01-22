@@ -31,7 +31,7 @@ impl Endpoint {
         &self,
         pool: Data<&MySqlPool>,
         config: Data<&Config>,
-        _api_key: KeyGuard,
+        _api_key: KeyGuard<2>,
     ) -> PatreonResponse {
         match get_patrons(&pool, &config).await {
             Ok(patrons) => PatreonResponse::Success(Json(patrons)),
@@ -52,7 +52,7 @@ impl Endpoint {
         ckey: Path<String>,
         pool: Data<&MySqlPool>,
         config: Data<&Config>,
-        _api_key: KeyGuard,
+        _api_key: KeyGuard<2>,
     ) -> PatreonStatusResponse {
         match is_patron(&ckey, &pool, &config).await {
             Ok(is) => PatreonStatusResponse::Success(Json(is)),

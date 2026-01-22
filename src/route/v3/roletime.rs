@@ -30,7 +30,7 @@ impl Endpoint {
         /// The player's ckey.
         ckey: Path<String>,
         pool: Data<&MySqlPool>,
-        _api_key: KeyGuard,
+        _api_key: KeyGuard<2>,
     ) -> RoletimePlayerResponse {
         match get_roletime_player(&ckey, &pool).await {
             Ok(roletime) => RoletimePlayerResponse::Success(Json(roletime)),
@@ -53,7 +53,7 @@ impl Endpoint {
         /// The job to filter by.
         job: Path<String>,
         pool: Data<&MySqlPool>,
-        _api_key: KeyGuard,
+        _api_key: KeyGuard<2>,
     ) -> RoletimeTopResponse {
         match get_roletime_top(&job, &pool).await {
             Ok(roletime) => RoletimeTopResponse::Success(Json(roletime)),
