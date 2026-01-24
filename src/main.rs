@@ -11,6 +11,8 @@ mod http;
 mod route;
 mod sqlxext;
 
+pub use api_impl::endpoint;
+
 use std::{net::SocketAddr, time::Duration};
 
 use poem::{EndpointExt, Server, listener::TcpListener, middleware::AddData};

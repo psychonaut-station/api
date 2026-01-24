@@ -4,20 +4,20 @@
 
 use poem::web::Data;
 use poem_openapi::{
-    ApiResponse, OpenApi,
     param::Path,
     payload::{Json, PlainText},
 };
 use sqlx::MySqlPool;
 
-use crate::database::{Ban, get_ban_by_id};
+use crate::{
+    database::{Ban, get_ban_by_id},
+    endpoint,
+};
 
 use super::KeyGuard;
 
-pub struct Endpoint;
-
-#[OpenApi]
-impl Endpoint {
+#[endpoint]
+mod __ {
     /// /v3/ban/{id}
     ///
     /// Retrieves ban information by its ID.
@@ -35,17 +35,17 @@ impl Endpoint {
             Err(e) => Response::InternalError(e.into()),
         }
     }
-}
 
-#[derive(ApiResponse)]
-enum Response {
-    /// Returns when ban information successfully retrieved.
-    #[oai(status = 200)]
-    Success(Json<Ban>),
-    /// Returns when the ban with the specified ID was not found.
-    #[oai(status = 404)]
-    NotFound(PlainText<String>),
-    /// Returns when a database error occurred.
-    #[oai(status = 500)]
-    InternalError(PlainText<String>),
+    #[response]
+    enum Response {
+        /// Returns when ban information successfully retrieved.
+        #[oai(status = 200)]
+        Success(Json<Ban>),
+        /// Returns when the ban with the specified ID was not found.
+        #[oai(status = 404)]
+        NotFound(PlainText<String>),
+        /// Returns when a database error occurred.
+        #[oai(status = 500)]
+        InternalError(PlainText<String>),
+    }
 }

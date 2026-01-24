@@ -4,23 +4,23 @@
 
 use poem::web::Data;
 use poem_openapi::{
-    ApiResponse, OpenApi,
     param::Path,
     payload::{Json, PlainText},
 };
 use sqlx::MySqlPool;
 use tracing::error;
 
-use crate::database::{
-    Error as DatabaseError, JobRoletime, PlayerRoletime, get_roletime_player, get_roletime_top,
+use crate::{
+    database::{
+        Error as DatabaseError, JobRoletime, PlayerRoletime, get_roletime_player, get_roletime_top,
+    },
+    endpoint,
 };
 
 use super::KeyGuard;
 
-pub struct Endpoint;
-
-#[OpenApi]
-impl Endpoint {
+#[endpoint]
+mod __ {
     /// /v3/roletime/player/{ckey}
     ///
     /// Retrieves the minutes played in each job for a player.
@@ -44,6 +44,19 @@ impl Endpoint {
         }
     }
 
+    #[response]
+    enum RoletimePlayerResponse {
+        /// Returns when roletimes successfully retrieved.
+        #[oai(status = 200)]
+        Success(Json<Vec<PlayerRoletime>>),
+        /// Returns when player not found.
+        #[oai(status = 404)]
+        NotFound(PlainText<String>),
+        /// Returns when an internal error occurs.
+        #[oai(status = 500)]
+        InternalError(PlainText<String>),
+    }
+
     /// /v3/roletime/top/{job}
     ///
     /// Retrieves the top 15 players for a specific job based on minutes played.
@@ -63,27 +76,14 @@ impl Endpoint {
             }
         }
     }
-}
 
-#[derive(ApiResponse)]
-enum RoletimePlayerResponse {
-    /// Returns when roletimes successfully retrieved.
-    #[oai(status = 200)]
-    Success(Json<Vec<PlayerRoletime>>),
-    /// Returns when player not found.
-    #[oai(status = 404)]
-    NotFound(PlainText<String>),
-    /// Returns when an internal error occurs.
-    #[oai(status = 500)]
-    InternalError(PlainText<String>),
-}
-
-#[derive(ApiResponse)]
-enum RoletimeTopResponse {
-    /// Returns when top players successfully retrieved.
-    #[oai(status = 200)]
-    Success(Json<Vec<JobRoletime>>),
-    /// Returns when an internal error occurs.
-    #[oai(status = 500)]
-    InternalError(PlainText<String>),
+    #[response]
+    enum RoletimeTopResponse {
+        /// Returns when top players successfully retrieved.
+        #[oai(status = 200)]
+        Success(Json<Vec<JobRoletime>>),
+        /// Returns when an internal error occurs.
+        #[oai(status = 500)]
+        InternalError(PlainText<String>),
+    }
 }

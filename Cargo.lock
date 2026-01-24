@@ -61,9 +61,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "api-impl"
+version = "0.1.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.104",
+]
+
+[[package]]
 name = "api-rewrite"
 version = "3.0.0"
 dependencies = [
+ "api-impl",
  "color-eyre",
  "const_format",
  "futures",

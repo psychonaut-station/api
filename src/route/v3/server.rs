@@ -3,7 +3,7 @@
 //! Provides an endpoint for querying the status of all configured game servers.
 
 use poem::web::Data;
-use poem_openapi::{ApiResponse, Object, OpenApi, Union, payload::Json};
+use poem_openapi::{Object, Union, payload::Json};
 use tracing::error;
 
 use crate::{
@@ -13,12 +13,11 @@ use crate::{
     },
     cache::Cache,
     config::Config,
+    endpoint,
 };
 
-pub struct Endpoint;
-
-#[OpenApi]
-impl Endpoint {
+#[endpoint]
+mod __ {
     /// /v3/server
     ///
     /// Retrieves the status of the game servers.
@@ -66,13 +65,13 @@ impl Endpoint {
 
         Response::Success(Json(response))
     }
-}
 
-#[derive(ApiResponse)]
-enum Response {
-    /// Returns when server status successfully retrieved.
-    #[oai(status = 200)]
-    Success(Json<Vec<Server>>),
+    #[response]
+    enum Response {
+        /// Returns when server status successfully retrieved.
+        #[oai(status = 200)]
+        Success(Json<Vec<Server>>),
+    }
 }
 
 /// A union representing either an online or offline server.

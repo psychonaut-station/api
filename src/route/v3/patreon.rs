@@ -5,7 +5,6 @@
 
 use poem::web::Data;
 use poem_openapi::{
-    ApiResponse, OpenApi,
     param::Path,
     payload::{Json, PlainText},
 };
@@ -15,14 +14,13 @@ use tracing::error;
 use crate::{
     config::Config,
     database::{get_patrons, is_patron},
+    endpoint,
 };
 
 use super::KeyGuard;
 
-pub struct Endpoint;
-
-#[OpenApi]
-impl Endpoint {
+#[endpoint]
+mod __ {
     /// /v3/patreon
     ///
     /// Retrieves the list of our Patreon supporters' ckeys.
@@ -40,6 +38,16 @@ impl Endpoint {
                 PatreonResponse::InternalError(e.into())
             }
         }
+    }
+
+    #[response]
+    enum PatreonResponse {
+        /// Returns when Patreon supporters successfully retrieved.
+        #[oai(status = 200)]
+        Success(Json<Vec<String>>),
+        /// Returns when a database or HTTP error occurred.
+        #[oai(status = 500)]
+        InternalError(PlainText<String>),
     }
 
     /// /v3/patreon/{ckey}
@@ -62,24 +70,14 @@ impl Endpoint {
             }
         }
     }
-}
 
-#[derive(ApiResponse)]
-enum PatreonResponse {
-    /// Returns when Patreon supporters successfully retrieved.
-    #[oai(status = 200)]
-    Success(Json<Vec<String>>),
-    /// Returns when a database or HTTP error occurred.
-    #[oai(status = 500)]
-    InternalError(PlainText<String>),
-}
-
-#[derive(ApiResponse)]
-enum PatreonStatusResponse {
-    /// Returns whether the specified ckey is a Patreon supporter.
-    #[oai(status = 200)]
-    Success(Json<bool>),
-    /// Returns when a database or HTTP error occurred.
-    #[oai(status = 500)]
-    InternalError(PlainText<String>),
+    #[response]
+    enum PatreonStatusResponse {
+        /// Returns whether the specified ckey is a Patreon supporter.
+        #[oai(status = 200)]
+        Success(Json<bool>),
+        /// Returns when a database or HTTP error occurred.
+        #[oai(status = 500)]
+        InternalError(PlainText<String>),
+    }
 }

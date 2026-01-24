@@ -1,9 +1,13 @@
+[workspace]
+members = [ ".", "api-impl" ]
+
 [package]
 name = "api-rewrite"
 version = "3.0.0"
 edition = "2024"
 
 [dependencies]
+api-impl = { path = "api-impl" }
 color-eyre = { version = "0.6.5", default-features = false }
 const_format = "0.2.34"
 futures = "0.3.31"

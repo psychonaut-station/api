@@ -4,24 +4,24 @@
 
 use poem::web::Data;
 use poem_openapi::{
-    ApiResponse, OpenApi,
     param::{Path, Query},
     payload::{Json, PlainText},
 };
 use sqlx::MySqlPool;
 use tracing::error;
 
-use crate::database::{
-    Achievement, Activity, Ban, Character, Error as DatabaseError, Player, get_player,
-    get_player_achievements, get_player_activity, get_player_bans, get_player_characters,
+use crate::{
+    database::{
+        Achievement, Activity, Ban, Character, Error as DatabaseError, Player, get_player,
+        get_player_achievements, get_player_activity, get_player_bans, get_player_characters,
+    },
+    endpoint,
 };
 
 use super::KeyGuard;
 
-pub struct Endpoint;
-
-#[OpenApi]
-impl Endpoint {
+#[endpoint]
+mod __ {
     /// /v3/player/{ckey}
     ///
     /// Retrieves basic player information by ckey.
@@ -43,6 +43,19 @@ impl Endpoint {
                 }
             },
         }
+    }
+
+    #[response]
+    enum PlayerResponse {
+        /// Returns when player data is successfully retrieved.
+        #[oai(status = 200)]
+        Success(Json<Player>),
+        /// Returns when player with the specified ckey does not exist.
+        #[oai(status = 404)]
+        NotFound(PlainText<String>),
+        /// Returns when a database error occurred.
+        #[oai(status = 500)]
+        InternalError(PlainText<String>),
     }
 
     /// /v3/player/{ckey}/achievements
@@ -70,6 +83,19 @@ impl Endpoint {
         }
     }
 
+    #[response]
+    enum PlayerAchievementsResponse {
+        /// Returns when player achievements successfully retrieved.
+        #[oai(status = 200)]
+        Success(Json<Vec<Achievement>>),
+        /// Returns when player with the specified ckey does not exist.
+        #[oai(status = 404)]
+        NotFound(PlainText<String>),
+        /// Returns when a database error occurred.
+        #[oai(status = 500)]
+        InternalError(PlainText<String>),
+    }
+
     /// /v3/player/{ckey}/activity
     ///
     /// Retrieves 180 day activity for the player.
@@ -91,6 +117,19 @@ impl Endpoint {
                 }
             },
         }
+    }
+
+    #[response]
+    enum PlayerActivityResponse {
+        /// Returns when player activity successfully retrieved.
+        #[oai(status = 200)]
+        Success(Json<Vec<Activity>>),
+        /// Returns when player with the specified ckey does not exist.
+        #[oai(status = 404)]
+        NotFound(PlainText<String>),
+        /// Returns when a database error occurred.
+        #[oai(status = 500)]
+        InternalError(PlainText<String>),
     }
 
     /// /v3/player/{ckey}/bans
@@ -121,6 +160,19 @@ impl Endpoint {
         }
     }
 
+    #[response]
+    enum PlayerBansResponse {
+        /// Returns when player bans successfully retrieved.
+        #[oai(status = 200)]
+        Success(Json<Vec<Ban>>),
+        /// Returns when player with the specified ckey does not exist.
+        #[oai(status = 404)]
+        NotFound(PlainText<String>),
+        /// Returns when a database error occurred.
+        #[oai(status = 500)]
+        InternalError(PlainText<String>),
+    }
+
     /// /v3/player/{ckey}/characters
     ///
     /// Retrieves characters associated with the player.
@@ -143,69 +195,17 @@ impl Endpoint {
             },
         }
     }
-}
 
-#[derive(ApiResponse)]
-enum PlayerResponse {
-    /// Returns when wlayer data successfully retrieved.
-    #[oai(status = 200)]
-    Success(Json<Player>),
-    /// Returns when player with the specified ckey does not exist.
-    #[oai(status = 404)]
-    NotFound(PlainText<String>),
-    /// Returns when a database error occurred.
-    #[oai(status = 500)]
-    InternalError(PlainText<String>),
-}
-
-#[derive(ApiResponse)]
-enum PlayerAchievementsResponse {
-    /// Returns when player achievements successfully retrieved.
-    #[oai(status = 200)]
-    Success(Json<Vec<Achievement>>),
-    /// Returns when player with the specified ckey does not exist.
-    #[oai(status = 404)]
-    NotFound(PlainText<String>),
-    /// Returns when a database error occurred.
-    #[oai(status = 500)]
-    InternalError(PlainText<String>),
-}
-
-#[derive(ApiResponse)]
-enum PlayerActivityResponse {
-    /// Returns when player activity successfully retrieved.
-    #[oai(status = 200)]
-    Success(Json<Vec<Activity>>),
-    /// Returns when player with the specified ckey does not exist.
-    #[oai(status = 404)]
-    NotFound(PlainText<String>),
-    /// Returns when a database error occurred.
-    #[oai(status = 500)]
-    InternalError(PlainText<String>),
-}
-
-#[derive(ApiResponse)]
-enum PlayerBansResponse {
-    /// Returns when player bans successfully retrieved.
-    #[oai(status = 200)]
-    Success(Json<Vec<Ban>>),
-    /// Returns when player with the specified ckey does not exist.
-    #[oai(status = 404)]
-    NotFound(PlainText<String>),
-    /// Returns when a database error occurred.
-    #[oai(status = 500)]
-    InternalError(PlainText<String>),
-}
-
-#[derive(ApiResponse)]
-enum PlayerCharactersResponse {
-    /// Returns when player characters successfully retrieved.
-    #[oai(status = 200)]
-    Success(Json<Vec<Character>>),
-    /// Returns when player with the specified ckey does not exist.
-    #[oai(status = 404)]
-    NotFound(PlainText<String>),
-    /// Returns when a database error occurred.
-    #[oai(status = 500)]
-    InternalError(PlainText<String>),
+    #[response]
+    enum PlayerCharactersResponse {
+        /// Returns when player characters successfully retrieved.
+        #[oai(status = 200)]
+        Success(Json<Vec<Character>>),
+        /// Returns when player with the specified ckey does not exist.
+        #[oai(status = 404)]
+        NotFound(PlainText<String>),
+        /// Returns when a database error occurred.
+        #[oai(status = 500)]
+        InternalError(PlainText<String>),
+    }
 }

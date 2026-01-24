@@ -5,21 +5,21 @@
 
 use poem::web::Data;
 use poem_openapi::{
-    ApiResponse, OpenApi,
     param::Path,
     payload::{Json, PlainText},
 };
 use sqlx::MySqlPool;
 use tracing::error;
 
-use crate::database::{self, verify_with_otp};
+use crate::{
+    database::{self, verify_with_otp},
+    endpoint,
+};
 
 use super::KeyGuard;
 
-pub struct Endpoint;
-
-#[OpenApi]
-impl Endpoint {
+#[endpoint]
+mod __ {
     /// /v3/verify/{id}/otp/{otp}
     ///
     /// Verifies a Discord account using a one-time token.
@@ -46,20 +46,20 @@ impl Endpoint {
             }
         }
     }
-}
 
-#[derive(ApiResponse)]
-enum Response {
-    /// Returns when verification succeeds with the associated ckey.
-    #[oai(status = 200)]
-    Success(Json<String>),
-    /// Returns when the OTP token is invalid or expired.
-    #[oai(status = 404)]
-    NotFound,
-    /// Returns with linked ckey when the Discord account is already in use.
-    #[oai(status = 409)]
-    Conflict(Json<String>),
-    /// Returns when a database error occurred.
-    #[oai(status = 500)]
-    InternalError(PlainText<String>),
+    #[response]
+    enum Response {
+        /// Returns when verification succeeds with the associated ckey.
+        #[oai(status = 200)]
+        Success(Json<String>),
+        /// Returns when the OTP token is invalid or expired.
+        #[oai(status = 404)]
+        NotFound,
+        /// Returns with linked ckey when the Discord account is already in use.
+        #[oai(status = 409)]
+        Conflict(Json<String>),
+        /// Returns when a database error occurred.
+        #[oai(status = 500)]
+        InternalError(PlainText<String>),
+    }
 }

@@ -3,22 +3,18 @@
 //! Provides an endpoint for retrieving recent test merged pull requests.
 
 use poem::web::Data;
-use poem_openapi::{
-    ApiResponse, OpenApi,
-    payload::{Json, PlainText},
-};
+use poem_openapi::payload::{Json, PlainText};
 use sqlx::MySqlPool;
 use tracing::error;
 
 use crate::{
     cache::Cache,
     database::{TestMerge, get_recent_test_merges},
+    endpoint,
 };
 
-pub struct Endpoint;
-
-#[OpenApi]
-impl Endpoint {
+#[endpoint]
+mod __ {
     /// /v3/recent-test-merges.json
     ///
     /// Retrieves the 200 most recent test merges.
@@ -40,14 +36,14 @@ impl Endpoint {
 
         Response::Success(Json(test_merges))
     }
-}
 
-#[derive(ApiResponse)]
-enum Response {
-    /// Returns when recent test merges successfully retrieved.
-    #[oai(status = 200)]
-    Success(Json<Vec<TestMerge>>),
-    /// Returns when a database error occurred.
-    #[oai(status = 500)]
-    InternalError(PlainText<String>),
+    #[response]
+    enum Response {
+        /// Returns when recent test merges successfully retrieved.
+        #[oai(status = 200)]
+        Success(Json<Vec<TestMerge>>),
+        /// Returns when a database error occurred.
+        #[oai(status = 500)]
+        InternalError(PlainText<String>),
+    }
 }

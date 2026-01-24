@@ -5,21 +5,21 @@
 
 use poem::web::Data;
 use poem_openapi::{
-    ApiResponse, OpenApi,
     param::Path,
     payload::{Json, PlainText},
 };
 use sqlx::MySqlPool;
 use tracing::error;
 
-use crate::database::{Lookup, lookup_cid, lookup_ip, lookup_player};
+use crate::{
+    database::{Lookup, lookup_cid, lookup_ip, lookup_player},
+    endpoint,
+};
 
 use super::KeyGuard;
 
-pub struct Endpoint;
-
-#[OpenApi]
-impl Endpoint {
+#[endpoint]
+mod __ {
     /// /v3/lookup/cid/{cid}
     ///
     /// Retrieves lookup information by computer ID.
@@ -30,12 +30,12 @@ impl Endpoint {
         cid: Path<String>,
         pool: Data<&MySqlPool>,
         _api_key: KeyGuard<1>,
-    ) -> LookupResponse {
+    ) -> Response {
         match lookup_cid(&cid, &pool).await {
-            Ok(lookup) => LookupResponse::Success(Json(lookup)),
+            Ok(lookup) => Response::Success(Json(lookup)),
             Err(e) => {
                 error!(cid = *cid, err = ?e, "error fetching cid lookup");
-                LookupResponse::InternalError(e.into())
+                Response::InternalError(e.into())
             }
         }
     }
@@ -51,12 +51,12 @@ impl Endpoint {
         ip: Path<String>,
         pool: Data<&MySqlPool>,
         _api_key: KeyGuard<1>,
-    ) -> LookupResponse {
+    ) -> Response {
         match lookup_ip(&ip, &pool).await {
-            Ok(lookup) => LookupResponse::Success(Json(lookup)),
+            Ok(lookup) => Response::Success(Json(lookup)),
             Err(e) => {
                 error!(ip = *ip, err = ?e, "error fetching ip lookup");
-                LookupResponse::InternalError(e.into())
+                Response::InternalError(e.into())
             }
         }
     }
@@ -71,23 +71,23 @@ impl Endpoint {
         ckey: Path<String>,
         pool: Data<&MySqlPool>,
         _api_key: KeyGuard<1>,
-    ) -> LookupResponse {
+    ) -> Response {
         match lookup_player(&ckey, &pool).await {
-            Ok(lookup) => LookupResponse::Success(Json(lookup)),
+            Ok(lookup) => Response::Success(Json(lookup)),
             Err(e) => {
                 error!(ckey = *ckey, err = ?e, "error fetching ckey lookup");
-                LookupResponse::InternalError(e.into())
+                Response::InternalError(e.into())
             }
         }
     }
-}
 
-#[derive(ApiResponse)]
-enum LookupResponse {
-    /// Returns when lookup successfully retrieved.
-    #[oai(status = 200)]
-    Success(Json<Vec<Lookup>>),
-    /// Returns when a database error occurred.
-    #[oai(status = 500)]
-    InternalError(PlainText<String>),
+    #[response]
+    enum Response {
+        /// Returns when lookup successfully retrieved.
+        #[oai(status = 200)]
+        Success(Json<Vec<Lookup>>),
+        /// Returns when a database error occurred.
+        #[oai(status = 500)]
+        InternalError(PlainText<String>),
+    }
 }

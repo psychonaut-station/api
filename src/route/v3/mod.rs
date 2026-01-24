@@ -25,7 +25,7 @@ macro_rules! service {
     };
 }
 
-service!(
+service![
     ban,
     lookup,
     patreon,
@@ -34,4 +34,4 @@ service!(
     roletime,
     server,
     verify,
-);
+];
