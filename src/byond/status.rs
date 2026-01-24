@@ -120,7 +120,7 @@ pub struct ServerStatus {
     pub gamestate: GameState,
     pub map_name: String,
     pub security_level: SecurityLevel,
-    pub round_duration: u32,
+    pub round_duration: i32,
     pub time_dilation_current: f32,
     pub time_dilation_avg: f32,
     pub time_dilation_avg_slow: f32,
