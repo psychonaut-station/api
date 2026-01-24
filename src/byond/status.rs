@@ -6,6 +6,7 @@
 use std::{net::SocketAddr, str::FromStr};
 
 use poem_openapi::Enum;
+use tracing::warn;
 
 use super::{
     Error, Result,
@@ -42,47 +43,61 @@ pub async fn status(address: SocketAddr) -> Result<Status> {
                 let key = split.next().ok_or(Error::InvalidResponse)?;
                 let value = split.next().unwrap_or("");
 
-                match key {
-                    "version" => status.version = value.to_string(),
-                    "respawn" => status.respawn = value == "1",
-                    "enter" => status.enter = value == "1",
-                    "ai" => status.ai = value == "1",
-                    "host" => status.host = value.to_string(),
-                    "round_id" => status.round_id = value.parse()?,
-                    "players" => status.players = value.parse()?,
-                    "revision" => status.revision = value.to_string(),
-                    "revision_date" => status.revision_date = value.to_string(),
-                    "hub" => status.hub = value == "1",
-                    "identifier" => status.identifier = value == "1",
-                    "admins" => status.admins = value.parse()?,
-                    "gamestate" => status.gamestate = value.parse()?,
-                    "map_name" => status.map_name = value.replace('+', " "),
-                    "security_level" => status.security_level = value.parse()?,
-                    "round_duration" => status.round_duration = value.parse()?,
-                    "time_dilation_current" => status.time_dilation_current = value.parse()?,
-                    "time_dilation_avg" => status.time_dilation_avg = value.parse()?,
-                    "time_dilation_avg_slow" => status.time_dilation_avg_slow = value.parse()?,
-                    "time_dilation_avg_fast" => status.time_dilation_avg_fast = value.parse()?,
-                    "soft_popcap" => status.soft_popcap = value.parse()?,
-                    "hard_popcap" => status.hard_popcap = value.parse()?,
-                    "extreme_popcap" => status.extreme_popcap = value.parse()?,
-                    "popcap" => status.popcap = value == "1",
-                    "bunkered" => status.bunkered = value == "1",
-                    "interviews" => status.interviews = value == "1",
-                    "shuttle_mode" => status.shuttle_mode = value.parse()?,
-                    "shuttle_timer" => status.shuttle_timer = value.parse()?,
-                    "public_address" => status.public_address = value.to_string(),
-                    _ => {
-                        #[cfg(debug_assertions)]
-                        tracing::warn!(key = value, addr = %address, "status topic responsed with unknown param");
-                    }
-                }
+                parse_param(&mut status, key, value).map_err(|e| {
+                    Error::ParseParam(key.to_string(), value.to_string(), Box::new(e))
+                })?;
             }
 
             Ok(status)
         }
         res => Err(Error::UnexpectedResponse(res)),
     }
+}
+
+/// Parses a single key-value parameter and updates the status object.
+///
+/// Takes a key-value pair from the status topic response and updates the
+/// corresponding field in the `Status` struct. Unknown keys are logged as
+/// warnings but don't cause errors.
+///
+/// # Errors
+///
+/// Returns an error if the value cannot be parsed into the expected type
+/// for the given key (e.g., parsing a non-numeric string as an integer).
+fn parse_param(status: &mut Status, key: &str, value: &str) -> Result<()> {
+    match key {
+        "version" => status.version = value.to_string(),
+        "respawn" => status.respawn = value == "1",
+        "enter" => status.enter = value == "1",
+        "ai" => status.ai = value == "1",
+        "host" => status.host = value.to_string(),
+        "round_id" => status.round_id = value.parse()?,
+        "players" => status.players = value.parse()?,
+        "revision" => status.revision = value.to_string(),
+        "revision_date" => status.revision_date = value.to_string(),
+        "hub" => status.hub = value == "1",
+        "identifier" => status.identifier = value == "1",
+        "admins" => status.admins = value.parse()?,
+        "gamestate" => status.gamestate = value.parse()?,
+        "map_name" => status.map_name = value.replace('+', " "),
+        "security_level" => status.security_level = value.parse()?,
+        "round_duration" => status.round_duration = value.parse()?,
+        "time_dilation_current" => status.time_dilation_current = value.parse()?,
+        "time_dilation_avg" => status.time_dilation_avg = value.parse()?,
+        "time_dilation_avg_slow" => status.time_dilation_avg_slow = value.parse()?,
+        "time_dilation_avg_fast" => status.time_dilation_avg_fast = value.parse()?,
+        "soft_popcap" => status.soft_popcap = value.parse()?,
+        "hard_popcap" => status.hard_popcap = value.parse()?,
+        "extreme_popcap" => status.extreme_popcap = value.parse()?,
+        "popcap" => status.popcap = value == "1",
+        "bunkered" => status.bunkered = value == "1",
+        "interviews" => status.interviews = value == "1",
+        "shuttle_mode" => status.shuttle_mode = value.parse()?,
+        "shuttle_timer" => status.shuttle_timer = value.parse()?,
+        "public_address" => status.public_address = value.to_string(),
+        _ => warn!(key = value, "status topic responsed with unknown param"),
+    }
+    Ok(())
 }
 
 /// An enum representing the current state of the game round.

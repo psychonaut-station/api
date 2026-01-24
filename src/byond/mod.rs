@@ -27,10 +27,13 @@ pub enum Error {
     #[error("BYOND topic unexpected response: {0:?}")]
     UnexpectedResponse(topic::Response),
 
-    #[error("Unknown game state: {0}")]
+    #[error("unknown game state: {0}")]
     GameStateConversion(String),
-    #[error("Unknown security level: {0}")]
+    #[error("unknown security level: {0}")]
     SecurityLevelConversion(String),
-    #[error("Unknown shuttle mode: {0}")]
+    #[error("unknown shuttle mode: {0}")]
     ShuttleModeConversion(String),
+
+    #[error("failed to parse parameter '{0}' with value '{1}': {2}")]
+    ParseParam(String, String, #[source] Box<Error>),
 }
