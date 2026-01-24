@@ -9,6 +9,7 @@ mod player;
 mod recent_test_merges;
 mod roletime;
 pub mod server;
+mod verify;
 
 pub use super::KeyGuard;
 
@@ -32,4 +33,5 @@ service!(
     recent_test_merges,
     roletime,
     server,
+    verify,
 );

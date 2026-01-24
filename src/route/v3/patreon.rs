@@ -33,7 +33,7 @@ impl Endpoint {
         config: Data<&Config>,
         _api_key: KeyGuard<2>,
     ) -> PatreonResponse {
-        match get_patrons(&pool, &config).await {
+        match get_patrons(&pool, &config.discord).await {
             Ok(patrons) => PatreonResponse::Success(Json(patrons)),
             Err(e) => {
                 error!(err = ?e, "error fetching patrons");
@@ -54,7 +54,7 @@ impl Endpoint {
         config: Data<&Config>,
         _api_key: KeyGuard<2>,
     ) -> PatreonStatusResponse {
-        match is_patron(&ckey, &pool, &config).await {
+        match is_patron(&ckey, &pool, &config.discord).await {
             Ok(is) => PatreonStatusResponse::Success(Json(is)),
             Err(e) => {
                 error!(err = ?e, "error checking patron status");
