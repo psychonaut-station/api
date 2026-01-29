@@ -70,7 +70,7 @@ pub enum ShuttleMode {
     #[default]
     Idle,
     Igniting,
-    Recallled,
+    Recalled,
     Called,
     Docked,
     Stranded,
@@ -89,7 +89,7 @@ impl FromStr for ShuttleMode {
         match s {
             "idle" => Ok(ShuttleMode::Idle),
             "igniting" => Ok(ShuttleMode::Igniting),
-            "recallled" => Ok(ShuttleMode::Recallled),
+            "recalled" => Ok(ShuttleMode::Recalled),
             "called" => Ok(ShuttleMode::Called),
             "docked" => Ok(ShuttleMode::Docked),
             "stranded" => Ok(ShuttleMode::Stranded),
