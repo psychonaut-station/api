@@ -1,6 +1,6 @@
 use rocket::config::LogLevel;
 use serde::Deserialize;
-use std::{collections::HashSet, fs::read_to_string, net::IpAddr};
+use std::{collections::HashSet, fs::read_to_string, net::IpAddr, path::PathBuf};
 use thiserror::Error;
 
 #[derive(Debug, Deserialize)]
@@ -32,6 +32,9 @@ pub struct Database {
     pub password: String,
     pub host: IpAddr,
     pub port: u16,
+    /// Unix socket of the database server. When set, `host` and `port` are not used.
+    #[serde(default)]
+    pub socket: Option<PathBuf>,
     pub game_database: String,
     pub api_database: String,
 }

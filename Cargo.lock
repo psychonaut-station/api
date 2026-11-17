@@ -1653,7 +1653,6 @@ dependencies = [
  "toml",
  "tracing",
  "tracing-subscriber",
- "urlencoding",
 ]
 
 [[package]]

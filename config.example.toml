@@ -18,6 +18,8 @@ user = "root"
 password = ""
 host = "127.0.0.1"
 port = 3306
+# Connect over this unix socket instead of host and port
+# socket = "/run/mysqld/mysqld.sock"
 game_database = ""
 api_database = ""
 
